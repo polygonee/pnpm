@@ -111,10 +111,6 @@ export default async function run (inputArgv: string[]) {
     return 'default'
   })()
 
-  initReporter(reporterType, {
-    cmd,
-    config,
-  })
   global['reporterInitialized'] = true
   delete config.reporter // This is a silly workaround because supi expects a function as config.reporter
 
@@ -143,7 +139,8 @@ export default async function run (inputArgv: string[]) {
       workspaceDir: wsDir,
     })
     config.selectedProjectsGraph = filterResults.selectedProjectsGraph
-    if (R.isEmpty(config.selectedProjectsGraph)) {
+    const selectedCount = Object.keys(config.selectedProjectsGraph).length
+    if (selectedCount === 0) {
       if (!config['parseable']) {
         console.log(`No projects matched the filters in "${wsDir}"`)
       }
@@ -155,7 +152,16 @@ export default async function run (inputArgv: string[]) {
     }
     config.allProjects = allProjects
     config.workspaceDir = wsDir
+    if (selectedCount === 1) {
+      config.dir = Object.values(filterResults.selectedProjectsGraph)[0].package.dir
+      config.recursive = false
+    }
   }
+
+  initReporter(reporterType, {
+    cmd,
+    config,
+  })
 
   // NOTE: we defer the next stage, otherwise reporter might not catch all the logs
   await new Promise((resolve, reject) => {
