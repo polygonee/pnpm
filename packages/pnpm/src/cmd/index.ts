@@ -33,6 +33,7 @@ export const GLOBAL_OPTIONS = R.pick([
   'help',
   'parseable',
   'prefix',
+  'workspace-packages',
 ], allTypes)
 
 export type Command = (
