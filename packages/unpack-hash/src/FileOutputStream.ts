@@ -1,12 +1,14 @@
 const _fs = require('fs');
+import makeDir = require('make-dir')
+import path = require('path')
 
 // write a stream to destination file
 export default function FileOutputStream(
-  istream: NodeJS.ReadStream,
+  istream: any,
   destinationFilename: string,
 ){
     // wrap into Promise
-    return new Promise(function(resolve, reject){
+    return new Promise(async function(resolve, reject){
 
         // file output stream
         let ostream: NodeJS.WriteStream | null = null;
@@ -24,10 +26,10 @@ export default function FileOutputStream(
                 ostream.removeListener('finish', onComplete);
             }
             
-            // close streams
-            if (istream){
-                istream.destroy();
-            }
+            // // close streams
+            // if (istream){
+                // istream.destroy();
+            // }
             if (ostream){
                 ostream.end();
             }
@@ -39,6 +41,7 @@ export default function FileOutputStream(
         // add additional error listener to input stream
         istream.on('error', onError);
 
+        await makeDir(path.dirname(destinationFilename))
         // open write stream
         ostream = _fs.createWriteStream(destinationFilename);
         ostream!.on('error', onError);

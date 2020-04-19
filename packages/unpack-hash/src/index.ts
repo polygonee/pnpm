@@ -1,12 +1,16 @@
+import contentPath = require('cacache/lib/content/path')
+import fs = require('fs')
+import StreamCache = require('stream-cache')
+import decompress = require('decompress-maybe')
+import fileOutputStream from './FileOutputStream'
 import path = require('path')
+import exists = require('path-exists')
 import ssri = require('ssri')
 import tar = require('tar-stream')
-import fileOutputStream from './FileOutputStream'
-import decompress = require('decompress-maybe')
 import { Duplex } from 'stream'
-import StreamCache = require('stream-cache')
 
 export default function untar (
+  unpackingLocker: Map<string, Promise<void>>,
   stream: NodeJS.ReadableStream,
   dest: string,
   opts?: {
@@ -25,8 +29,21 @@ export default function untar (
       }
       const cache = new StreamCache()
       fileStream.pipe(cache)
-      const integrity = await ssri.fromStream(fileStream)
-      await fileOutputStream(cache as any, path.join(dest, encodeURIComponent(integrity.toString())))
+      const integrity = (await ssri.fromStream(fileStream)).toString()
+      if (unpackingLocker.has(integrity)) {
+        await unpackingLocker.get(integrity)
+        next()
+        return
+      }
+      const p = (async () => {
+        const fileDest = contentPath(dest, integrity)
+
+        if (await exists(fileDest)) return
+
+        await fileOutputStream(cache as any, fileDest)
+      })()
+      unpackingLocker.set(integrity, p)
+      await p
       next()
     })
     // listener

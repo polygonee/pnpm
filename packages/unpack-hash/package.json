@@ -11,7 +11,10 @@
   "license": "ISC",
   "dependencies": {
     "@types/node": "^13.13.0",
+    "cacache": "15.0.0",
     "decompress-maybe": "^1.0.0",
+    "make-dir": "3.0.2",
+    "path-exists": "4.0.0",
     "ssri": "6.0.1",
     "stream-cache": "^0.0.2",
     "tar-stream": "^2.1.2"
