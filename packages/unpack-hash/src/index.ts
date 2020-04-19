@@ -7,7 +7,7 @@ import path = require('path')
 import exists = require('path-exists')
 import ssri = require('ssri')
 import tar = require('tar-stream')
-import { Duplex } from 'stream'
+import { Duplex, PassThrough } from 'stream'
 
 export default function untar (
   unpackingLocker: Map<string, Promise<void>>,
@@ -27,32 +27,40 @@ export default function untar (
         next()
         return
       }
-      const cache = new StreamCache()
-      fileStream.pipe(cache)
-      const integrity = (await ssri.fromStream(fileStream)).toString()
-      if (unpackingLocker.has(integrity)) {
-        await unpackingLocker.get(integrity)
-        next()
-        return
-      }
-      const p = (async () => {
-        const fileDest = contentPath(dest, integrity)
-
-        if (await exists(fileDest)) return
-
-        await fileOutputStream(cache as any, fileDest)
-      })()
-      unpackingLocker.set(integrity, p)
-      await p
+      await addFileToCafs(unpackingLocker, dest, fileStream)
       next()
     })
     // listener
     extract.on('finish', function(){
-        resolve();
+      resolve();
     });
     extract.on('error', reject);
 
     // pipe through extractor
     stream.pipe(decompress() as Duplex).on('error', reject).pipe(extract)
   })
+}
+
+async function addFileToCafs (
+  locker: Map<string, Promise<void>>,
+  cafsDir: string,
+  fileStream: PassThrough,
+) {
+  const cache = new StreamCache()
+  fileStream.pipe(cache)
+  const integrity = (await ssri.fromStream(fileStream)).toString()
+  if (locker.has(integrity)) {
+    await locker.get(integrity)
+    return integrity
+  }
+  const p = (async () => {
+    const fileDest = contentPath(cafsDir, integrity)
+
+    if (await exists(fileDest)) return
+
+    await fileOutputStream(cache as any, fileDest)
+  })()
+  locker.set(integrity, p)
+  await p
+  return integrity
 }
