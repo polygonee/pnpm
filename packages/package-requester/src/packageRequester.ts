@@ -457,35 +457,29 @@ function fetchToStore (
       // Ideally, files wouldn't care about when integrity is calculated.
       // However, we can only rename the temp folder once we know the package name.
       // And we cannot rename the temp folder till we're calculating integrities.
-      if (ctx.verifyStoreIntegrity) {
-        const fileIntegrities = await Promise.all(
-          Object.keys(filesIndex)
-            .map((filename) =>
-            filesIndex[filename].generatingIntegrity
-                .then((fileIntegrity: object) => ({
-                  [filename]: {
-                    integrity: fileIntegrity,
-                    size: filesIndex[filename].size,
-                  },
-                })),
-            ),
-        )
-        const integrity = fileIntegrities
-          .reduce((acc, info) => {
-            Object.assign(acc, info)
-            return acc
-          }, {})
-        await writeJsonFile(path.join(target, 'integrity.json'), integrity, { indent: undefined })
-      } else {
-        // TODO: save only filename: {size}
-        await writeJsonFile(path.join(target, 'integrity.json'), filesIndex, { indent: undefined })
-      }
+      const fileIntegrities = await Promise.all(
+        Object.keys(filesIndex)
+          .map((filename) =>
+          filesIndex[filename].generatingIntegrity
+              .then((fileIntegrity: object) => ({
+                [filename]: {
+                  integrity: fileIntegrity,
+                  size: filesIndex[filename].size,
+                },
+              })),
+          ),
+      )
+      const integrity = fileIntegrities
+        .reduce((acc, info) => {
+          Object.assign(acc, info)
+          return acc
+        }, {})
+      await writeJsonFile(path.join(target, 'integrity.json'), integrity, { indent: undefined })
       finishing.resolve(undefined)
 
       let pkgName: string | undefined = opts.pkgName
       if (!pkgName || opts.fetchRawManifest) {
-        console.log(filesIndex)
-        const manifest = await readPackage(ctx.getFilePathInCafs(filesIndex['package.json'].integrity)) as DependencyManifest
+        const manifest = await readPackage(ctx.getFilePathInCafs(integrity['package.json'].integrity)) as DependencyManifest
         bundledManifest.resolve(pickBundledManifest(manifest))
         if (!pkgName) {
           pkgName = manifest.name

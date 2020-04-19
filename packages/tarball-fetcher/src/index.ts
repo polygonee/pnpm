@@ -13,6 +13,7 @@ import fs = require('mz/fs')
 import path = require('path')
 import pathTemp = require('path-temp')
 import rimraf = require('rimraf')
+import StreamCache = require('stream-cache')
 import ssri = require('ssri')
 import * as unpackStream from 'unpack-stream'
 import createDownloader, { DownloadFunction } from './createDownloader'
@@ -182,9 +183,12 @@ async function fetchFromLocalTarball (
     unpackToCafs: UnpackToCafs,
   },
 ): Promise<FetchResult> {
-  const tarballStream = fs.createReadStream(tarball)
+  let tarballStream = fs.createReadStream(tarball)
   if (opts.integrity) {
+    const cache = new StreamCache()
+    tarballStream.pipe(cache)
     await ssri.checkStream(tarballStream, opts.integrity)
+    tarballStream = cache
   }
   const filesIndex = await opts.unpackToCafs(tarballStream, opts.ignore)
   return { filesIndex }

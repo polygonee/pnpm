@@ -49,6 +49,7 @@
     "retry": "0.12.0",
     "rimraf": "3.0.2",
     "ssri": "6.0.1",
+    "stream-cache": "0.0.2",
     "unpack-stream": "6.0.0"
   },
   "devDependencies": {
