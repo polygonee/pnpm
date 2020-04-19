@@ -16,19 +16,18 @@ export default async function untar (
   stream: NodeJS.ReadableStream,
   _ignore?: (filename: string) => Boolean,
 ): Promise<FilesIndex> {
-  const ignore = _ignore ? function (header: {name: string}) {
-    return _ignore!(header && header.name)
-  } : () => false
+  const ignore = _ignore ? _ignore : () => false
   const extract = tar.extract()
   const filesIndex = {}
   await new Promise((resolve, reject) => {
     extract.on('entry', async (header, fileStream, next) => {
-      if (header.type !== 'file' || ignore(header)) {
+      const filename = header.name.substr(header.name.indexOf('/') + 1)
+      if (header.type !== 'file' || ignore(filename)) {
         next()
         return
       }
       const generatingIntegrity = addFileToCafs(unpackingLocker, dest, fileStream)
-      filesIndex[header.name.substr(header.name.indexOf('/') + 1)] = {
+      filesIndex[filename] = {
         generatingIntegrity,
         size: header.size,
       }
