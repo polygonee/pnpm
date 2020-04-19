@@ -28,7 +28,7 @@ export default async function untar (
         return
       }
       const generatingIntegrity = addFileToCafs(unpackingLocker, dest, fileStream)
-      filesIndex[header.name] = {
+      filesIndex[header.name.substr(8)] = {
         generatingIntegrity,
         size: header.size,
       }

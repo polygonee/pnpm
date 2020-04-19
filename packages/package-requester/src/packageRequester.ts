@@ -484,6 +484,7 @@ function fetchToStore (
 
       let pkgName: string | undefined = opts.pkgName
       if (!pkgName || opts.fetchRawManifest) {
+        console.log(filesIndex)
         const manifest = await readPackage(ctx.getFilePathInCafs(filesIndex['package.json'].integrity)) as DependencyManifest
         bundledManifest.resolve(pickBundledManifest(manifest))
         if (!pkgName) {

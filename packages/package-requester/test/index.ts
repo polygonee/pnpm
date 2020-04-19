@@ -37,7 +37,7 @@ const fetch = createFetcher({
   strictSsl: false,
 })
 
-test('request package', async t => {
+test.only('request package', async t => {
   const storeIndex = {}
   const requestPackage = createPackageRequester(resolve, fetch, {
     networkConcurrency: 1,
