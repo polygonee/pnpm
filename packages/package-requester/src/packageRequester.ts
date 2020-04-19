@@ -307,7 +307,7 @@ function fetchToStore (
     // Changing the value of fromStore is needed for correct reporting of `pnpm server`.
     // Otherwise, if a package was not in store when the server started, it will be always
     // reported as "downloaded" instead of "reused".
-    files.promise.then(({ filenames, fromStore }) => { // tslint:disable-line
+    files.promise.then(({ filesIndex, fromStore }) => { // tslint:disable-line
       // If it's already in the store, we don't need to update the cache
       if (fromStore) {
         return
@@ -327,7 +327,7 @@ function fetchToStore (
       ctx.fetchingLocker.set(opts.pkgId, {
         bundledManifest: tmp.bundledManifest,
         files: Promise.resolve({
-          filenames,
+          filesIndex,
           fromStore: true,
         }),
         finishing: tmp.finishing,
@@ -390,10 +390,10 @@ function fetchToStore (
         // if target exists and it wasn't modified, then no need to refetch it
         const satisfiedIntegrity = ctx.verifyStoreIntegrity
           ? await checkPackage(linkToUnpacked)
-          : await loadJsonFile<object>(path.join(path.dirname(linkToUnpacked), 'integrity.json'))
+          : await loadJsonFile<Record<string, { integrity: string }>>(path.join(path.dirname(linkToUnpacked), 'integrity.json'))
         if (satisfiedIntegrity) {
           files.resolve({
-            filenames: Object.keys(satisfiedIntegrity).filter((f) => !satisfiedIntegrity[f].isDir), // Filtering can be removed for store v3
+            filesIndex: satisfiedIntegrity, // Filtering can be removed for store v3
             fromStore: true,
           })
           if (opts.fetchRawManifest) {
@@ -492,7 +492,7 @@ function fetchToStore (
 
       ctx.storeIndex[targetRelative] = ctx.storeIndex[targetRelative] || []
       files.resolve({
-        filenames: Object.keys(filesIndex).filter((f) => !filesIndex[f].isDir), // Filtering can be removed for store v3
+        filesIndex: integrity, // Filtering can be removed for store v3
         fromStore: false,
       })
     } catch (err) {

@@ -5,10 +5,12 @@ import createPackageRequester, { getCacheByEngine } from '@pnpm/package-requeste
 import pkgIdToFilename from '@pnpm/pkgid-to-filename'
 import { ResolveFunction } from '@pnpm/resolver-base'
 import {
+  ImportPackageFunction,
   PackageUsagesBySearchQueries,
   StoreController,
 } from '@pnpm/store-controller-types'
 import { StoreIndex } from '@pnpm/types'
+import { getFilePathInCafs as _getFilePathInCafs } from '@pnpm/unpack-to-cafs'
 import rimraf = require('@zkochan/rimraf')
 import pFilter = require('p-filter')
 import pLimit from 'p-limit'
@@ -51,13 +53,23 @@ export default async function (
     verifyStoreIntegrity: initOpts.verifyStoreIntegrity,
   })
 
+  const impPkg = createImportPackage(initOpts.packageImportMethod)
+  const getFilePathInCafs = _getFilePathInCafs.bind(null, path.join(storeDir, 'files'))
+  const importPackage: ImportPackageFunction = (to, opts) => {
+    const filesMap = {} as Record<string, string>
+    for (const [fileName, { integrity }] of Object.entries(opts.filesResponse.filesIndex)) {
+      filesMap[fileName] = getFilePathInCafs(integrity)
+    }
+    return impPkg(to, { filesMap, fromStore: opts.filesResponse.fromStore, force: opts.force })
+  }
+
   return {
     close: unlock ? async () => { await unlock() } : () => Promise.resolve(undefined),
     closeSync: unlock ? () => unlock.sync() : () => undefined,
     fetchPackage: packageRequester.fetchPackageToStore,
     findPackageUsages,
     getPackageLocation,
-    importPackage: createImportPackage(initOpts.packageImportMethod),
+    importPackage,
     prune,
     requestPackage: packageRequester.requestPackage,
     saveState: saveStore.bind(null, initOpts.storeDir, storeIndex),
@@ -153,7 +165,8 @@ export default async function (
     const cachePath = path.join(storeDir, opts.packageId, 'side_effects', opts.engine, 'package')
     // TODO calculate integrity.json here
     const filenames: string[] = []
-    await copyPkg(builtPkgLocation, cachePath, { filesResponse: { fromStore: true, filenames }, force: true })
+    throw new Error('upload not implemented yet')
+    // await copyPkg(builtPkgLocation, cachePath, { filesResponse: { fromStore: true, filenames }, force: true })
   }
 }
 

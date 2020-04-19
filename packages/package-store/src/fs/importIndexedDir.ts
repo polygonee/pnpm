@@ -9,11 +9,15 @@ const importingLogger = pnpmLogger('_package-file-already-exists')
 
 type ImportFile = (src: string, dest: string) => Promise<void>
 
-export default async function importIndexedDir (importFile: ImportFile, existingDir: string, newDir: string, filenames: string[]) {
+export default async function importIndexedDir (
+  importFile: ImportFile,
+  newDir: string,
+  filenames: Record<string, string>,
+) {
   const stage = pathTemp(path.dirname(newDir))
   try {
     await rimraf(stage)
-    await tryImportIndexedDir(importFile, existingDir, stage, filenames)
+    await tryImportIndexedDir(importFile, stage, filenames)
     await rimraf(newDir)
     await fs.rename(stage, newDir)
   } catch (err) {
@@ -22,9 +26,9 @@ export default async function importIndexedDir (importFile: ImportFile, existing
   }
 }
 
-async function tryImportIndexedDir (importFile: ImportFile, existingDir: string, newDir: string, filenames: string[]) {
+async function tryImportIndexedDir (importFile: ImportFile, newDir: string, filenames: Record<string, string>) {
   const alldirs = new Set<string>()
-  filenames
+  Object.keys(filenames)
     .forEach((f) => {
       alldirs.add(path.join(newDir, path.dirname(f)))
     })
@@ -33,9 +37,8 @@ async function tryImportIndexedDir (importFile: ImportFile, existingDir: string,
   )
   let allLinked = true
   await Promise.all(
-    filenames
-      .map(async (f: string) => {
-        const src = path.join(existingDir, f)
+    Object.entries(filenames)
+      .map(async ([f, src]: [string, string]) => {
         const dest = path.join(newDir, f)
         try {
           await importFile(src, dest)
@@ -55,7 +58,7 @@ async function tryImportIndexedDir (importFile: ImportFile, existingDir: string,
   )
   if (!allLinked) {
     globalWarn(
-      `Not all files from "${existingDir}" were linked to "${newDir}". ` +
+      `Not all files were linked to "${newDir}". ` +
       'This happens when the store is case sensitive while the target directory is case insensitive.',
     )
   }

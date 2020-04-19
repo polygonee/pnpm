@@ -24,6 +24,7 @@
     "@pnpm/resolver-base": "workspace:7.0.0",
     "@pnpm/store-controller-types": "workspace:7.0.0",
     "@pnpm/types": "workspace:5.0.0",
+    "@pnpm/unpack-to-cafs": "workspace:0.0.0",
     "@zkochan/rimraf": "1.0.0",
     "load-json-file": "6.2.0",
     "make-dir": "3.0.2",
