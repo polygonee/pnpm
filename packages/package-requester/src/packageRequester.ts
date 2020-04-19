@@ -28,6 +28,7 @@ import {
   DependencyManifest,
   StoreIndex,
 } from '@pnpm/types'
+import _unpackToCafs, { getFilePathInCafs as _getFilePathInCafs } from '@pnpm/unpack-to-cafs'
 import rimraf = require('@zkochan/rimraf')
 import loadJsonFile = require('load-json-file')
 import makeDir = require('make-dir')
@@ -65,12 +66,10 @@ export default function (
   resolve: ResolveFunction,
   fetchers: {[type: string]: FetchFunction},
   opts: {
-    getFilePathInCafs: (integrity: string) => string,
     networkConcurrency?: number,
     storeDir: string,
     storeIndex: StoreIndex,
     verifyStoreIntegrity: boolean,
-    unpackToCafs: UnpackToCafs,
   },
 ): RequestPackageFunction & {
   fetchPackageToStore: FetchPackageToStoreFunction,
@@ -85,15 +84,18 @@ export default function (
   requestsQueue['counter'] = 0 // tslint:disable-line
   requestsQueue['concurrency'] = networkConcurrency // tslint:disable-line
 
+  const cafsDir = path.join(opts.storeDir, 'files')
+  const unpackToCafs = _unpackToCafs.bind(null, new Map(), cafsDir)
+  const getFilePathInCafs = _getFilePathInCafs.bind(null, cafsDir)
   const fetch = fetcher.bind(null, fetchers)
   const fetchPackageToStore = fetchToStore.bind(null, {
     fetch,
     fetchingLocker: new Map(),
-    getFilePathInCafs: opts.getFilePathInCafs,
+    getFilePathInCafs,
     requestsQueue,
     storeDir: opts.storeDir,
     storeIndex: opts.storeIndex,
-    unpackToCafs: opts.unpackToCafs,
+    unpackToCafs,
     verifyStoreIntegrity: opts.verifyStoreIntegrity,
   })
   const requestPackage = resolveAndFetch.bind(null, {
@@ -101,7 +103,7 @@ export default function (
     requestsQueue,
     resolve,
     storeDir: opts.storeDir,
-    unpackToCafs: opts.unpackToCafs,
+    unpackToCafs,
     verifyStoreIntegrity: opts.verifyStoreIntegrity,
   })
 

@@ -12,14 +12,12 @@ import { Duplex, PassThrough } from 'stream'
 
 export default async function untar (
   unpackingLocker: Map<string, Promise<void>>,
-  stream: NodeJS.ReadableStream,
   dest: string,
-  opts?: {
-    ignore?: (filename: string) => boolean,
-  },
+  stream: NodeJS.ReadableStream,
+  _ignore?: (filename: string) => Boolean,
 ): Promise<FilesIndex> {
-  const ignore = opts && opts.ignore ? function (header: {name: string}) {
-    return opts.ignore!(header && header.name)
+  const ignore = _ignore ? function (header: {name: string}) {
+    return _ignore!(header && header.name)
   } : () => false
   const extract = tar.extract()
   const filesIndex = {}
