@@ -72,3 +72,7 @@ async function addFileToCafs (
   await p
   return integrity
 }
+
+export function getFilePathInCafs (cafsDir: string, integrity: string) {
+  return contentPath(cafsDir, ssri.parse(integrity))
+}

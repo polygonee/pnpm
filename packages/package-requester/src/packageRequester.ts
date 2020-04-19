@@ -4,10 +4,11 @@ import {
   FetchFunction,
   FetchOptions,
   FetchResult,
+  UnpackToCafs,
 } from '@pnpm/fetcher-base'
 import logger from '@pnpm/logger'
 import pkgIdToFilename from '@pnpm/pkgid-to-filename'
-import { fromDir as readPkgFromDir } from '@pnpm/read-package-json'
+import readPackage, { fromDir as readPkgFromDir } from '@pnpm/read-package-json'
 import {
   DirectoryResolution,
   Resolution,
@@ -64,10 +65,12 @@ export default function (
   resolve: ResolveFunction,
   fetchers: {[type: string]: FetchFunction},
   opts: {
+    getFilePathInCafs: (integrity: string) => string,
     networkConcurrency?: number,
     storeDir: string,
     storeIndex: StoreIndex,
     verifyStoreIntegrity: boolean,
+    unpackToCafs: UnpackToCafs,
   },
 ): RequestPackageFunction & {
   fetchPackageToStore: FetchPackageToStoreFunction,
@@ -86,9 +89,11 @@ export default function (
   const fetchPackageToStore = fetchToStore.bind(null, {
     fetch,
     fetchingLocker: new Map(),
+    getFilePathInCafs: opts.getFilePathInCafs,
     requestsQueue,
     storeDir: opts.storeDir,
     storeIndex: opts.storeIndex,
+    unpackToCafs: opts.unpackToCafs,
     verifyStoreIntegrity: opts.verifyStoreIntegrity,
   })
   const requestPackage = resolveAndFetch.bind(null, {
@@ -96,6 +101,7 @@ export default function (
     requestsQueue,
     resolve,
     storeDir: opts.storeDir,
+    unpackToCafs: opts.unpackToCafs,
     verifyStoreIntegrity: opts.verifyStoreIntegrity,
   })
 
@@ -108,6 +114,7 @@ async function resolveAndFetch (
     resolve: ResolveFunction,
     fetchPackageToStore: FetchPackageToStoreFunction,
     storeDir: string,
+    unpackToCafs: UnpackToCafs,
     verifyStoreIntegrity: boolean,
   },
   wantedDependency: WantedDependency,
@@ -238,7 +245,6 @@ function fetchToStore (
     fetch: (
       packageId: string,
       resolution: Resolution,
-      target: string,
       opts: FetchOptions,
     ) => Promise<FetchResult>,
     fetchingLocker: Map<string, {
@@ -247,9 +253,11 @@ function fetchToStore (
       bundledManifest?: Promise<BundledManifest>,
       inStoreLocation: string,
     }>,
+    getFilePathInCafs: (integrity: string) => string,
     requestsQueue: {add: <T>(fn: () => Promise<T>, opts: {priority: number}) => Promise<T>},
     storeIndex: StoreIndex,
     storeDir: string,
+    unpackToCafs: UnpackToCafs,
     verifyStoreIntegrity: boolean,
   },
   opts: {
@@ -404,7 +412,6 @@ function fetchToStore (
       // target directory.
 
       let filesIndex!: {}
-      let tempLocation!: string
       await Promise.all([
         (async () => {
           // Tarballs are requested first because they are bigger than metadata files.
@@ -416,7 +423,6 @@ function fetchToStore (
           const fetchedPackage = await ctx.requestsQueue.add(() => ctx.fetch(
             opts.pkgId,
             opts.resolution,
-            target,
             {
               cachedTarballLocation: path.join(ctx.storeDir, opts.pkgId, 'packed.tgz'),
               lockfileDir: opts.lockfileDir,
@@ -435,11 +441,11 @@ function fetchToStore (
                   status: 'started',
                 })
               },
+              unpackToCafs: ctx.unpackToCafs,
             },
           ), { priority })
 
           filesIndex = fetchedPackage.filesIndex
-          tempLocation = fetchedPackage.tempLocation
         })(),
         // removing only the folder with the unpacked files
         // not touching tarball and integrity.json
@@ -476,20 +482,12 @@ function fetchToStore (
 
       let pkgName: string | undefined = opts.pkgName
       if (!pkgName || opts.fetchRawManifest) {
-        const manifest = await readPkgFromDir(tempLocation) as DependencyManifest
+        const manifest = await readPackage(ctx.getFilePathInCafs(filesIndex['package.json'].integrity)) as DependencyManifest
         bundledManifest.resolve(pickBundledManifest(manifest))
         if (!pkgName) {
           pkgName = manifest.name
         }
       }
-
-      const unpacked = path.join(target, 'node_modules', pkgName)
-      await makeDir(path.dirname(unpacked))
-
-      // rename(oldPath, newPath) is an atomic operation, so we do it at the
-      // end
-      await renameOverwrite(tempLocation, unpacked)
-      await symlinkDir(unpacked, linkToUnpacked)
 
       if (isLocalTarballDep && opts.resolution['integrity']) { // tslint:disable-line:no-string-literal
         await fs.writeFile(path.join(target, TARBALL_INTEGRITY_FILENAME), opts.resolution['integrity'], 'utf8') // tslint:disable-line:no-string-literal
@@ -566,7 +564,6 @@ async function fetcher (
   fetcherByHostingType: {[hostingType: string]: FetchFunction},
   packageId: string,
   resolution: Resolution,
-  target: string,
   opts: FetchOptions,
 ): Promise<FetchResult> {
   const fetch = fetcherByHostingType[resolution.type || 'tarball']
@@ -574,7 +571,7 @@ async function fetcher (
     throw new Error(`Fetching for dependency type "${resolution.type}" is not supported`)
   }
   try {
-    return await fetch(resolution, target, opts)
+    return await fetch(resolution, opts)
   } catch (err) {
     packageRequestLogger.warn({
       message: `Fetching ${packageId} failed!`,
