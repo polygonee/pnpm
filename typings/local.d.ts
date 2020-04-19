@@ -142,3 +142,18 @@ declare module 'yaml-tag' {
   const anything: any;
   export = anything;
 }
+
+declare module 'decompress-maybe' {
+  const anything: any;
+  export = anything;
+}
+
+declare module 'stream-cache' {
+  const anything: any;
+  export = anything;
+}
+
+declare module 'cacache/lib/content/path' {
+  const anything: any;
+  export = anything;
+}

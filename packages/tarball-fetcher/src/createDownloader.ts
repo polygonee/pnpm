@@ -1,5 +1,5 @@
 import PnpmError from '@pnpm/error'
-import { FetchResult, FilesIndex } from '@pnpm/fetcher-base'
+import { FetchResult, FilesIndex, UnpackToCafs } from '@pnpm/fetcher-base'
 import logger from '@pnpm/logger'
 import createFetcher from 'fetch-from-npm-registry'
 import fs = require('graceful-fs')
@@ -7,10 +7,10 @@ import { IncomingMessage } from 'http'
 import makeDir = require('make-dir')
 import path = require('path')
 import pathTemp = require('path-temp')
+import renameOverwrite = require('rename-overwrite')
 import retry = require('retry')
 import rimraf = require('rimraf')
 import ssri = require('ssri')
-import unpackStream = require('unpack-stream')
 import urlLib = require('url')
 import { BadTarballError } from './errorTypes'
 
@@ -61,13 +61,12 @@ export type DownloadFunction = (url: string, saveto: string, opts: {
     authHeaderValue: string | undefined,
     alwaysAuth: boolean | undefined,
   },
-  unpackTo: string,
+  unpackToCafs: UnpackToCafs,
   registry?: string,
   onStart?: (totalSize: number | null, attempt: number) => void,
   onProgress?: (downloaded: number) => void,
   ignore?: (filename: string) => boolean,
-  integrity?: string
-  generatePackageIntegrity?: boolean,
+  integrity?: string,
 }) => Promise<FetchResult>
 
 export interface NpmRegistryClient {
@@ -114,13 +113,12 @@ export default (
       authHeaderValue: string | undefined,
       alwaysAuth: boolean | undefined,
     },
-    unpackTo: string,
+    unpackToCafs: UnpackToCafs,
     registry?: string,
     onStart?: (totalSize: number | null, attempt: number) => void,
     onProgress?: (downloaded: number) => void,
     ignore?: (filename: string) => boolean,
     integrity?: string,
-    generatePackageIntegrity?: boolean,
   }): Promise<FetchResult> {
     const saveToDir = path.dirname(saveto)
     await makeDir(saveToDir)
@@ -185,31 +183,21 @@ export default (
             .pipe(writeStream)
             .on('error', reject)
 
-          const tempLocation = pathTemp(opts.unpackTo)
           const ignore = gotOpts.fsIsCaseSensitive ? opts.ignore : createIgnorer(url, opts.ignore)
           try {
-            const [integrityCheckResult, filesIndex] = await Promise.all([
+            const [integrityCheckResult] = await Promise.all([
               opts.integrity && safeCheckStream(res.body, opts.integrity, url) || true,
-              unpackStream.local(res.body, tempLocation, {
-                generateIntegrity: opts.generatePackageIntegrity,
-                ignore,
-              }),
               waitTillClosed({ stream, size, getDownloaded: () => downloaded, url }),
             ])
             if (integrityCheckResult !== true) {
               throw integrityCheckResult
             }
-            fs.rename(tempTarballLocation, saveto, () => {
-              // ignore errors
-            })
-            resolve({ tempLocation, filesIndex: filesIndex as FilesIndex })
+            await renameOverwrite(tempTarballLocation, saveto)
+            const filesIndex = await opts.unpackToCafs(fs.createReadStream(saveto), ignore)
+            resolve({ filesIndex: filesIndex as FilesIndex })
           } catch (err) {
             rimraf(tempTarballLocation, () => {
               // ignore errors
-            })
-            rimraf(tempLocation, () => {
-              // Just ignoring this error
-              // A redundant stage folder won't break anything
             })
             reject(err)
           }

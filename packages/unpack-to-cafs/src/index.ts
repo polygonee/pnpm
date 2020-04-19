@@ -1,3 +1,4 @@
+import { FilesIndex } from '@pnpm/fetcher-base'
 import contentPath = require('cacache/lib/content/path')
 import fs = require('fs')
 import StreamCache = require('stream-cache')
@@ -9,25 +10,31 @@ import ssri = require('ssri')
 import tar = require('tar-stream')
 import { Duplex, PassThrough } from 'stream'
 
-export default function untar (
+export default async function untar (
   unpackingLocker: Map<string, Promise<void>>,
   stream: NodeJS.ReadableStream,
   dest: string,
   opts?: {
     ignore?: (filename: string) => boolean,
   },
-) {
+): Promise<FilesIndex> {
   const ignore = opts && opts.ignore ? function (header: {name: string}) {
     return opts.ignore!(header && header.name)
   } : () => false
   const extract = tar.extract()
-  return new Promise((resolve, reject) => {
+  const filesIndex = {}
+  await new Promise((resolve, reject) => {
     extract.on('entry', async (header, fileStream, next) => {
       if (header.type !== 'file' || ignore(header)) {
         next()
         return
       }
-      await addFileToCafs(unpackingLocker, dest, fileStream)
+      const generatingIntegrity = addFileToCafs(unpackingLocker, dest, fileStream)
+      filesIndex[header.name] = {
+        generatingIntegrity,
+        size: header.size,
+      }
+      await generatingIntegrity
       next()
     })
     // listener
@@ -39,28 +46,29 @@ export default function untar (
     // pipe through extractor
     stream.pipe(decompress() as Duplex).on('error', reject).pipe(extract)
   })
+  return filesIndex
 }
 
 async function addFileToCafs (
   locker: Map<string, Promise<void>>,
   cafsDir: string,
   fileStream: PassThrough,
-) {
+): Promise<ssri.Integrity> {
   const cache = new StreamCache()
   fileStream.pipe(cache)
-  const integrity = (await ssri.fromStream(fileStream)).toString()
-  if (locker.has(integrity)) {
-    await locker.get(integrity)
+  const integrity = await ssri.fromStream(fileStream)
+  const fileDest = contentPath(cafsDir, integrity)
+  if (locker.has(fileDest)) {
+    await locker.get(fileDest)
     return integrity
   }
   const p = (async () => {
-    const fileDest = contentPath(cafsDir, integrity)
 
     if (await exists(fileDest)) return
 
     await fileOutputStream(cache as any, fileDest)
   })()
-  locker.set(integrity, p)
+  locker.set(fileDest, p)
   await p
   return integrity
 }

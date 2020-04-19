@@ -16,6 +16,9 @@
       "path": "../fetcher-base"
     },
     {
+      "path": "../unpack-to-cafs"
+    },
+    {
       "path": "../fetch-from-npm-registry"
     }
   ]

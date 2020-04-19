@@ -3,8 +3,10 @@ import {
   FetchFunction,
   FetchOptions,
   FetchResult,
+  UnpackToCafs,
 } from '@pnpm/fetcher-base'
 import { globalWarn } from '@pnpm/logger'
+import unpackToCafs from '@pnpm/unpack-to-cafs'
 import getCredentialsByURI = require('credentials-by-uri')
 import mem = require('mem')
 import fs = require('mz/fs')
@@ -80,7 +82,6 @@ export default function (
 function fetchFromTarball (
   ctx: {
     fetchFromRemoteTarball: (
-      dir: string,
       dist: {
         integrity?: string,
         registry?: string,
@@ -95,17 +96,17 @@ function fetchFromTarball (
     registry?: string,
     tarball: string,
   },
-  target: string,
   opts: FetchOptions,
 ) {
   if (resolution.tarball.startsWith('file:')) {
     const tarball = path.join(opts.lockfileDir, resolution.tarball.slice(5))
-    return fetchFromLocalTarball(tarball, target, {
+    return fetchFromLocalTarball(tarball, {
       ignore: ctx.ignore,
       integrity: resolution.integrity,
+      unpackToCafs: opts.unpackToCafs,
     })
   }
-  return ctx.fetchFromRemoteTarball(target, resolution, opts)
+  return ctx.fetchFromRemoteTarball(resolution, opts)
 }
 
 async function fetchFromRemoteTarball (
@@ -118,7 +119,6 @@ async function fetchFromRemoteTarball (
       alwaysAuth: boolean | undefined,
     },
   },
-  unpackTo: string,
   dist: {
     integrity?: string,
     registry?: string,
@@ -127,8 +127,9 @@ async function fetchFromRemoteTarball (
   opts: FetchOptions,
 ) {
   try {
-    return await fetchFromLocalTarball(opts.cachedTarballLocation, unpackTo, {
+    return await fetchFromLocalTarball(opts.cachedTarballLocation, {
       integrity: dist.integrity,
+      unpackToCafs: opts.unpackToCafs,
     })
   } catch (err) {
     // ignore errors for missing files or broken/partial archives
@@ -168,41 +169,23 @@ async function fetchFromRemoteTarball (
       onProgress: opts.onProgress,
       onStart: opts.onStart,
       registry: dist.registry,
-      unpackTo,
+      unpackToCafs: opts.unpackToCafs,
     })
   }
 }
 
 async function fetchFromLocalTarball (
   tarball: string,
-  dir: string,
   opts: {
     ignore?: IgnoreFunction,
     integrity?: string,
+    unpackToCafs: UnpackToCafs,
   },
 ): Promise<FetchResult> {
   const tarballStream = fs.createReadStream(tarball)
-  const tempLocation = pathTemp(dir)
-  try {
-    const filesIndex = (
-      await Promise.all([
-        unpackStream.local(
-          tarballStream,
-          tempLocation,
-          {
-            ignore: opts.ignore,
-          },
-        ),
-        opts.integrity && (ssri.checkStream(tarballStream, opts.integrity) as any), // tslint:disable-line
-      ])
-    )[0]
-    return { filesIndex, tempLocation }
-  } catch (err) {
-    rimraf(tempLocation, () => {
-      // ignore errors
-    })
-    err.attempts = 1
-    err.resource = tarball
-    throw err
+  if (opts.integrity) {
+    await ssri.checkStream(tarballStream, opts.integrity)
   }
+  const filesIndex = await opts.unpackToCafs(tarballStream, opts.ignore)
+  return { filesIndex }
 }
