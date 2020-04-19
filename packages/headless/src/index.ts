@@ -687,7 +687,7 @@ async function linkAllPkgs (
       const filesResponse = await depNode.fetchingFiles()
 
       if (depNode.independent) return
-      return storeController.importPackage(depNode.centralLocation, depNode.peripheralLocation, {
+      return storeController.importPackage(depNode.peripheralLocation, {
         filesResponse,
         force: opts.force,
       })
