@@ -99,6 +99,7 @@ importers:
       decompress-maybe: 1.0.0
       get-stream: 5.1.0
       mz: 2.7.0
+      p-defer: 3.0.0
       p-limit: 2.3.0
       path-exists: 4.0.0
       path-temp: 2.0.0
@@ -121,6 +122,7 @@ importers:
       decompress-maybe: ^1.0.0
       get-stream: 5.1.0
       mz: 2.7.0
+      p-defer: 3.0.0
       p-limit: 2.3.0
       path-exists: 4.0.0
       path-temp: 2.0.0
@@ -9454,6 +9456,12 @@ packages:
       node: '>=4'
     resolution:
       integrity: sha1-n26xgvbJqozXQwBKfU+WsZaw+ww=
+  /p-defer/3.0.0:
+    dev: false
+    engines:
+      node: '>=8'
+    resolution:
+      integrity: sha512-ugZxsxmtTln604yeYd29EGrNhazN2lywetzpKhfmQjW/VJmhpDmWbiX+h0zL8V91R0UXkhb3KtPmyq9PZw3aYw==
   /p-event/4.1.0:
     dependencies:
       p-timeout: 2.0.1

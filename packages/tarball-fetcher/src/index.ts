@@ -4,6 +4,7 @@ import {
   FetchFunction,
   FetchOptions,
   FetchResult,
+  FilesIndex,
 } from '@pnpm/fetcher-base'
 import { globalWarn } from '@pnpm/logger'
 import getCredentialsByURI = require('credentials-by-uri')
@@ -11,6 +12,7 @@ import mem = require('mem')
 import fs = require('mz/fs')
 import path = require('path')
 import ssri = require('ssri')
+import { Readable } from 'stream'
 import createDownloader, { DownloadFunction } from './createDownloader'
 
 export default function (
@@ -90,6 +92,7 @@ function fetchFromTarball (
     const tarball = path.join(opts.lockfileDir, resolution.tarball.slice(5))
     return fetchFromLocalTarball(cafs, tarball, {
       integrity: resolution.integrity,
+      local: true,
     })
   }
   return ctx.fetchFromRemoteTarball(cafs, resolution, opts)
@@ -163,17 +166,25 @@ async function fetchFromLocalTarball (
   tarball: string,
   opts: {
     integrity?: string,
+    local?: boolean,
   },
 ): Promise<FetchResult> {
   try {
-    const tarballStream = fs.createReadStream(tarball)
-    const [filesIndex] = (
-      await Promise.all([
-        cafs.addFilesFromTarball(tarballStream),
-        opts.integrity && (ssri.checkStream(tarballStream, opts.integrity) as any), // tslint:disable-line
-      ])
-    )
-    return { filesIndex }
+    let tarballStream!: Readable
+    let checking!: Promise<unknown>
+    if (opts.integrity && opts.local !== true) {
+      const tarball = cafs.getTarballStream(opts.integrity)
+      tarballStream = tarball.stream
+      checking = tarball.checking
+    } else {
+      tarballStream = fs.createReadStream(tarball)
+      checking = Promise.resolve()
+    }
+    const [filesIndex] = await Promise.all([
+      cafs.addFilesFromTarball(tarballStream),
+      checking,
+    ])
+    return { filesIndex: filesIndex as FilesIndex }
   } catch (err) {
     err.attempts = 1
     err.resource = tarball

@@ -1,4 +1,5 @@
 import getStream = require('get-stream')
+import fs = require('mz/fs')
 import path = require('path')
 import exists = require('path-exists')
 import pathTemp = require('path-temp')
@@ -8,11 +9,15 @@ import { Hash } from 'ssri'
 import addFilesFromDir from './addFilesFromDir'
 import addFilesFromTarball from './addFilesFromTarball'
 import checkFilesIntegrity from './checkFilesIntegrity'
+import * as tarballStorage from './tarballStorage'
 import writeFile from './writeFile'
 
 export { checkFilesIntegrity }
 
 export default function createCafs (cafsDir: string, ignore?: ((filename: string) => Boolean)) {
+  // We need to have this directory.
+  // The tarballs are temporarily written to it.
+  fs.mkdirSync(path.join(cafsDir, 'tmp'), { recursive: true })
   const locker = new Map()
   const _writeBufferToCafs = writeBufferToCafs.bind(null, locker, cafsDir)
   const addStream = addStreamToCafs.bind(null, _writeBufferToCafs)
@@ -20,6 +25,8 @@ export default function createCafs (cafsDir: string, ignore?: ((filename: string
   return {
     addFilesFromDir: addFilesFromDir.bind(null, { addBuffer, addStream }),
     addFilesFromTarball: addFilesFromTarball.bind(null, addStream, ignore ?? null),
+    addTarballStream: tarballStorage.addTarballStreamToCafs.bind(null, cafsDir),
+    getTarballStream: tarballStorage.readTarballStreamFromCafs.bind(null, cafsDir),
   }
 }
 

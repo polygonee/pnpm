@@ -8,6 +8,7 @@ import pathTemp = require('path-temp')
 import retry = require('retry')
 import rimraf = require('rimraf')
 import ssri = require('ssri')
+import { Readable } from 'stream'
 import urlLib = require('url')
 import { BadTarballError } from './errorTypes'
 
@@ -165,6 +166,14 @@ export default (
           downloaded += chunk.length
           if (onProgress) onProgress(downloaded)
         })
+
+        if (opts.integrity) {
+          const [filesIndex] = await Promise.all([
+            opts.cafs.addFilesFromTarball(res.body),
+            opts.cafs.addTarballStream(res.body as Readable, opts.integrity),
+          ])
+          return { filesIndex }
+        }
 
         const tempTarballLocation = pathTemp(saveToDir)
         const writeStream = fs.createWriteStream(tempTarballLocation)

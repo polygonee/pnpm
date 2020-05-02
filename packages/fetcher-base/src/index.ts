@@ -1,9 +1,12 @@
 import { Resolution } from '@pnpm/resolver-base'
-import { Integrity } from 'ssri'
+import { Hash, Integrity } from 'ssri'
+import { Readable } from 'stream'
 
 export type Cafs = {
   addFilesFromDir: (dir: string) => Promise<FilesIndex>,
   addFilesFromTarball: (stream: NodeJS.ReadableStream) => Promise<FilesIndex>,
+  addTarballStream: (stream: Readable, integrity: string) => Promise<void>,
+  getTarballStream: (integrity: string) => { stream: Readable, checking: Promise<Hash> },
 }
 
 export interface FetchOptions {
