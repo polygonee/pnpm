@@ -843,3 +843,69 @@ test('remove dependencies of a project that was removed from the workspace (duri
     await project.hasNot(`.pnpm/is-negative@1.0.0`)
   }
 })
+
+test.only('resolve a subdependency from the workspace', async (t) => {
+  preparePackages(t, [
+    {
+      location: 'project',
+      package: { name: 'project' },
+    },
+    {
+      location: 'dep-of-pkg-with-1-dep',
+      package: { name: 'dep-of-pkg-with-1-dep' },
+    },
+  ])
+
+  const importers: MutatedProject[] = [
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'project',
+        version: '1.0.0',
+
+        dependencies: {
+          'pkg-with-1-dep': '100.0.0',
+        },
+      },
+      mutation: 'install',
+      rootDir: path.resolve('project'),
+    },
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'dep-of-pkg-with-1-dep',
+        version: '100.1.0',
+      },
+      mutation: 'install',
+      rootDir: path.resolve('dep-of-pkg-with-1-dep'),
+    },
+  ]
+  const workspacePackages = {
+    'dep-of-pkg-with-1-dep': {
+      '100.1.0': {
+        dir: path.resolve('dep-of-pkg-with-1-dep'),
+        manifest: {
+          name: 'dep-of-pkg-with-1-dep',
+          version: '100.1.0',
+        },
+      },
+    },
+  }
+  await mutateModules(importers, await testDefaults({ workspacePackages }))
+
+  const project = assertProject(t, process.cwd())
+
+  {
+    const wantedLockfile = await project.readLockfile()
+    console.log(JSON.stringify(wantedLockfile, null, 2))
+    // t.deepEqual(Object.keys(wantedLockfile.importers), ['project-1'])
+    // t.deepEqual(Object.keys(wantedLockfile.packages), ['/is-positive/1.0.0'])
+
+    // const currentLockfile = await project.readCurrentLockfile()
+    // t.deepEqual(Object.keys(currentLockfile.importers), ['project-1', 'project-2'])
+    // t.deepEqual(Object.keys(currentLockfile.packages), ['/is-negative/1.0.0', '/is-positive/1.0.0'])
+
+    // await project.has(`.pnpm/is-positive@1.0.0`)
+    // await project.has(`.pnpm/is-negative@1.0.0`)
+  }
+})

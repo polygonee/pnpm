@@ -279,6 +279,7 @@ export default async function resolveDependencies (
                 proceed: !resolveDependencyResult.depIsLinked,
                 resolvedDependencies,
                 updateDepth,
+                workspacePackages: options.workspacePackages,
               }
             ) as PkgAddress[]
             ctx.childrenByParentId[resolveDependencyResult.pkgId] = children.map((child) => ({
@@ -287,7 +288,10 @@ export default async function resolveDependencies (
             }))
             ctx.dependenciesTree[resolveDependencyResult.nodeId] = {
               children: children.reduce((chn, child) => {
-                chn[child.alias] = child.nodeId
+                chn[child.alias] = child.nodeId ??
+                  (
+                    child['resolution']?.directory
+                      ? 'link:' + path.relative(ctx.lockfileDir, child['resolution']?.directory) : undefined)
                 return chn
               }, {}),
               depth: options.currentDepth,
@@ -571,24 +575,16 @@ async function resolveDependency (
 
   if (pkgResponse.body.isLocal) {
     const manifest = pkgResponse.body.manifest || await pkgResponse.bundledManifest!() // tslint:disable-line:no-string-literal
-    if (options.currentDepth > 0) {
-      logger.warn({
-        message: `Ignoring file dependency because it is not a root dependency ${wantedDependency}`,
-        prefix: ctx.prefix,
-      })
-      return null
-    } else {
-      return {
-        alias: wantedDependency.alias || manifest.name,
-        dev: wantedDependency.dev,
-        id: pkgResponse.body.id,
-        isLinkedDependency: true,
-        name: manifest.name,
-        normalizedPref: pkgResponse.body.normalizedPref,
-        optional: wantedDependency.optional,
-        resolution: pkgResponse.body.resolution,
-        version: manifest.version,
-      }
+    return {
+      alias: wantedDependency.alias || manifest.name,
+      dev: wantedDependency.dev,
+      id: pkgResponse.body.id,
+      isLinkedDependency: true,
+      name: manifest.name,
+      normalizedPref: pkgResponse.body.normalizedPref,
+      optional: wantedDependency.optional,
+      resolution: pkgResponse.body.resolution,
+      version: manifest.version,
     }
   }
 

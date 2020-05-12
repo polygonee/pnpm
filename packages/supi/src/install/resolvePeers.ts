@@ -122,7 +122,7 @@ export default function (
 
   R.values(depGraph).forEach((node) => {
     node.children = R.keys(node.children).reduce((acc, alias) => {
-      acc[alias] = pathsByNodeId[node.children[alias]]
+      acc[alias] = pathsByNodeId[node.children[alias]] ?? node.children[alias]
       return acc
     }, {})
   })
@@ -156,6 +156,7 @@ function resolvePeersOfNode (
   }
 ): {[alias: string]: string} {
   const node = ctx.dependenciesTree[nodeId]
+  if (!node) return {}
   if (ctx.purePkgs.has(node.resolvedPackage.depPath) && ctx.depGraph[node.resolvedPackage.depPath].depth <= node.depth) {
     ctx.pathsByNodeId[nodeId] = node.resolvedPackage.depPath
     return {}
@@ -383,10 +384,18 @@ interface ParentRef {
 function toPkgByName (nodes: Array<{alias: string, nodeId: string, node: DependenciesTreeNode}>): ParentRefs {
   const pkgsByName: ParentRefs = {}
   for (const { alias, node, nodeId } of nodes) {
-    pkgsByName[alias] = {
-      depth: node.depth,
-      nodeId,
-      version: node.resolvedPackage.version,
+    if (!node) {
+      pkgsByName[alias] = {
+        depth: 0,
+        nodeId,
+        version: '0.0.0',
+      }
+    } else {
+      pkgsByName[alias] = {
+        depth: node.depth,
+        nodeId,
+        version: node.resolvedPackage.version,
+      }
     }
   }
   return pkgsByName

@@ -32,7 +32,7 @@ export default function (
   for (const depPath of Object.keys(depGraph)) {
     const depNode = depGraph[depPath]
     const [updatedOptionalDeps, updatedDeps] = R.partition(
-      (child) => depNode.optionalDependencies.has(depGraph[child.depPath].name),
+      (child) => depNode.optionalDependencies.has(child.alias),
       Object.keys(depNode.children).map((alias) => ({ alias, depPath: depNode.children[alias] }))
     )
     lockfile.packages[depPath] = toLockfileDependency(pendingRequiresBuilds, depNode.additionalInfo, {
@@ -197,6 +197,9 @@ function updateResolvedDeps (
     updatedDeps
       .map(({ alias, depPath }): R.KeyValuePair<string, string> => {
         const depNode = depGraph[depPath]
+        if (!depNode) {
+          return [alias, depPath]
+        }
         return [
           alias,
           depPathToRef(depNode.depPath, {
