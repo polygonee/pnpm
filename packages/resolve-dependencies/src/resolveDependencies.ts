@@ -284,7 +284,7 @@ export default async function resolveDependencies (
             ) as PkgAddress[]
             ctx.childrenByParentId[resolveDependencyResult.pkgId] = children.map((child) => ({
               alias: child.alias,
-              pkgId: child.pkgId,
+              pkgId: child.pkgId || 'link:' + path.relative(ctx.lockfileDir, child['resolution']?.directory),
             }))
             ctx.dependenciesTree[resolveDependencyResult.nodeId] = {
               children: children.reduce((chn, child) => {

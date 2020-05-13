@@ -200,6 +200,10 @@ function buildTree (
     if (nodeIdContainsSequence(parentNodeId, parentId, child.pkgId)) {
       continue
     }
+    if (child.pkgId.startsWith('link:')) {
+      childrenNodeIds[child.alias] = child.pkgId
+      continue
+    }
     const childNodeId = createNodeId(parentNodeId, child.pkgId)
     childrenNodeIds[child.alias] = childNodeId
     installable = installable && !ctx.skipped.has(child.pkgId)
