@@ -59,7 +59,7 @@ import extendOptions, {
   InstallOptions,
   StrictInstallOptions,
 } from './extendInstallOptions'
-import getPreferredVersionsFromPackage, { getPreferredVersionsFromLockfile } from './getPreferredVersions'
+import getPreferredVersionsFromPackage, { addPreferredVersionsFromLockfile } from './getPreferredVersions'
 import getWantedDependencies, {
   PinnedVersion,
   WantedDependency,
@@ -587,12 +587,14 @@ async function installInContext (
     stage: 'resolution_started',
   })
 
-  const preferredVersions = opts.preferredVersions ?? (
+  const preferredVersions = opts.preferredVersions ?? {}
+  if (
     !opts.update &&
     ctx.wantedLockfile.packages &&
-    !R.isEmpty(ctx.wantedLockfile.packages) &&
-    getPreferredVersionsFromLockfile(ctx.wantedLockfile.packages!) || undefined
-  )
+    !R.isEmpty(ctx.wantedLockfile.packages)
+  ) {
+    addPreferredVersionsFromLockfile(preferredVersions, ctx.wantedLockfile.packages!)
+  }
   const updateLockfile = ctx.wantedLockfile.lockfileVersion !== LOCKFILE_VERSION || !opts.currentLockfileIsUpToDate
   const defaultUpdateDepth = (() => {
     if (opts.force || updateLockfile) return Infinity

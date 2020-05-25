@@ -157,6 +157,43 @@ test('prefer version ranges passed in via opts.preferredVersions', async (t: tap
   t.notOk(lockfile.packages['/dep-of-pkg-with-1-dep/100.1.0'])
 })
 
+test('prefer already installed versions of packages (even when preferredVersions is set as well)', async (t: tape.Test) => {
+  await addDistTag({ package: 'dep-of-pkg-with-1-dep', version: '100.0.0', distTag: 'latest' })
+
+  const project = prepareEmpty(t)
+
+  const manifest = await install(
+    {
+      dependencies: {
+        'parent-of-pkg-with-1-dep': '^1.0.0',
+      },
+    },
+    await testDefaults({ lockfileOnly: true })
+  )
+
+  {
+    const lockfile = await project.readLockfile()
+    t.ok(lockfile.packages['/dep-of-pkg-with-1-dep/100.0.0'])
+  }
+
+  await addDistTag({ package: 'dep-of-pkg-with-1-dep', version: '100.1.0', distTag: 'latest' })
+
+  await install(
+    manifest,
+    await testDefaults(
+      {
+        preferFrozenLockfile: false,
+        preferredVersions: {},
+      }
+    )
+  )
+
+  {
+    const lockfile = await project.readLockfile()
+    t.ok(lockfile.packages['/dep-of-pkg-with-1-dep/100.0.0'], 'subdep was not updated')
+  }
+})
+
 // Covers https://github.com/pnpm/pnpm/issues/1187
 test('prefer version of package that also satisfies the range of the same package higher in the dependency graph', async (t: tape.Test) => {
   const project = prepareEmpty(t)
