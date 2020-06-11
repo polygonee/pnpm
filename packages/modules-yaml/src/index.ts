@@ -21,6 +21,8 @@ export interface Modules {
   pendingBuilds: string[],
   registries?: Registries, // nullable for backward compatibility
   shamefullyHoist: boolean,
+  shamefullyHoistPattern?: string[]
+  shamefullyHoisted: string[],
   skipped: string[],
   storeDir: string,
   virtualStoreDir: string,

@@ -14,7 +14,6 @@ import {
 import hoist from '@pnpm/hoist'
 import { Lockfile } from '@pnpm/lockfile-file'
 import logger from '@pnpm/logger'
-import matcher from '@pnpm/matcher'
 import { prune } from '@pnpm/modules-cleaner'
 import { IncludedDependencies } from '@pnpm/modules-yaml'
 import { DependenciesTree, LinkedDependency } from '@pnpm/resolve-dependencies'
@@ -63,6 +62,9 @@ export default async function linkPackages (
     hoistedAliases: {[depPath: string]: string[]},
     hoistedModulesDir: string,
     hoistPattern?: string[],
+    shamfullyHoistedModulesDir: string,
+    shamefullHoistPattern?: string[],
+    shamefullyHoistedAliases: Set<string>,
     include: IncludedDependencies,
     lockfileDir: string,
     makePartialCurrentLockfile: boolean,
@@ -154,6 +156,8 @@ export default async function linkPackages (
     lockfileDir: opts.lockfileDir,
     pruneStore: opts.pruneStore,
     registries: opts.registries,
+    shamefullyHoistedAliases: opts.shamefullyHoistedAliases,
+    shamefullyHoistedModulesDir: opts.shamefullHoistPattern && opts.shamfullyHoistedModulesDir || undefined,
     skipped: opts.skipped,
     storeController: opts.storeController,
     virtualStoreDir: opts.virtualStoreDir,
@@ -304,14 +308,22 @@ export default async function linkPackages (
   }
 
   let newHoistedAliases: Record<string, string[]> = {}
+  let publiclyHoistedAliases!: Set<string>
   if (opts.hoistPattern && (newDepPaths.length > 0 || removedDepPaths.size > 0)) {
-    newHoistedAliases = await hoist(matcher(opts.hoistPattern!), {
+    const hoistResult = await hoist({
       lockfile: currentLockfile,
       lockfileDir: opts.lockfileDir,
-      modulesDir: opts.hoistedModulesDir,
+      privateHoistDir: opts.hoistedModulesDir,
+      privateHoistPattern: opts.hoistPattern,
+      publicHoistDir: opts.shamfullyHoistedModulesDir,
+      publicHoistPattern: opts.shamefullHoistPattern ?? [],
       registries: opts.registries,
       virtualStoreDir: opts.virtualStoreDir,
     })
+    newHoistedAliases = hoistResult.hoistedDeps
+    publiclyHoistedAliases = hoistResult.publiclyHoistedAliases
+  } else {
+    publiclyHoistedAliases = new Set()
   }
 
   if (!opts.dryRun) {
