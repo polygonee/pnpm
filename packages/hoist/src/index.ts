@@ -22,6 +22,7 @@ export default async function hoistByLockfile (
     privateHoistedModulesDir: string,
     publicHoistPattern: string[],
     publicHoistedModulesDir: string,
+    skipped: Set<string>,
     virtualStoreDir: string,
   }
 ) {
@@ -29,7 +30,8 @@ export default async function hoistByLockfile (
 
   const { directDeps, step } = lockfileWalker(
     opts.lockfile,
-    Object.keys(opts.lockfile.importers)
+    Object.keys(opts.lockfile.importers),
+    { skipped: opts.skipped }
   )
   const deps = [
     {
@@ -57,6 +59,7 @@ export default async function hoistByLockfile (
     lockfileDir: opts.lockfileDir,
     privateHoistedModulesDir: opts.privateHoistedModulesDir,
     publicHoistedModulesDir: opts.publicHoistedModulesDir,
+    skipped: opts.skipped,
     virtualStoreDir: opts.virtualStoreDir,
   })
 
@@ -186,6 +189,7 @@ async function symlinkHoistedDependencies (
     lockfileDir: string,
     privateHoistedModulesDir: string,
     publicHoistedModulesDir: string,
+    skipped: Set<string>,
     virtualStoreDir: string,
   }
 ) {
@@ -194,6 +198,7 @@ async function symlinkHoistedDependencies (
       .map(async ([depPath, pkgAliases]) => {
         const pkgSnapshot = opts.lockfile.packages![depPath]
         if (!pkgSnapshot) {
+          if (opts.skipped.has(depPath)) return
           globalWarn(`Failed to find "${depPath}" in lockfile during hoisting. `
             + `Next aliases will not be hoisted: ${Object.keys(pkgAliases).join(', ')}`)
           return
