@@ -1,6 +1,6 @@
 dependencies:
   symlink-dir: 2.0.2
-lockfileVersion: 5
+lockfileVersion: 5.1
 packages:
   /@types/mz/0.0.32:
     dependencies:

@@ -1,7 +1,7 @@
 dependencies:
   general: 'link:../general'
   is-positive: 3.1.0
-lockfileVersion: 5
+lockfileVersion: 5.1
 packages:
   /is-positive/3.1.0:
     dev: false

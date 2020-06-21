@@ -4,7 +4,7 @@ importers:
       is-positive: 1.0.0
     specifiers:
       is-positive: 1.0.0
-lockfileVersion: 5
+lockfileVersion: 5.1
 packages:
   /is-positive/1.0.0:
     dev: false
