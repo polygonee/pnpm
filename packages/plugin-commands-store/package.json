@@ -63,7 +63,7 @@
     "@pnpm/pkgid-to-filename": "^3.0.0",
     "@pnpm/store-connection-manager": "workspace:0.3.23",
     "@pnpm/store-controller-types": "workspace:8.0.2",
-    "@pnpm/store-path": "^4.0.0",
+    "@pnpm/store-path": "^4.0.2",
     "@pnpm/types": "workspace:6.2.0",
     "archy": "^1.0.0",
     "dependency-path": "workspace:5.0.3",
