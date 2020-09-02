@@ -55,11 +55,11 @@ const dependencyResolvedLogger = logger('_dependency_resolved')
 
 export function nodeIdToParents (
   nodeId: string,
-  resolvedPackagesByPackageId: ResolvedPackagesByPackageId
+  resolvedPackagesByDepPath: ResolvedPackagesByDepPath
 ) {
   return splitNodeId(nodeId).slice(1)
-    .map((pkgId) => {
-      const { id, name, version } = resolvedPackagesByPackageId[pkgId]
+    .map((depPath) => {
+      const { id, name, version } = resolvedPackagesByDepPath[depPath]
       return { id, name, version }
     })
 }
@@ -87,9 +87,7 @@ export interface DependenciesTree {
   [nodeId: string]: DependenciesTreeNode
 }
 
-export interface ResolvedPackagesByPackageId {
-  [packageId: string]: ResolvedPackage
-}
+export type ResolvedPackagesByDepPath = Record<string, ResolvedPackage>
 
 export interface LinkedDependency {
   isLinkedDependency: true
@@ -114,7 +112,7 @@ export interface PendingNode {
 export interface ChildrenByParentId {
   [parentId: string]: Array<{
     alias: string
-    pkgId: string
+    depPath: string
   }>
 }
 
@@ -123,7 +121,7 @@ export interface ResolutionContext {
   defaultTag: string
   dryRun: boolean
   forceFullResolution: boolean
-  resolvedPackagesByPackageId: ResolvedPackagesByPackageId
+  resolvedPackagesByDepPath: ResolvedPackagesByDepPath
   outdatedDependencies: {[pkgId: string]: string}
   childrenByParentId: ChildrenByParentId
   pendingNodes: PendingNode[]
@@ -150,6 +148,7 @@ export interface ResolutionContext {
 export type PkgAddress = {
   alias: string
   depIsLinked: boolean
+  depPath: string
   isNew: boolean
   isLinkedDependency?: false
   nodeId: string
@@ -201,7 +200,7 @@ export interface ResolvedPackage {
   }
 }
 
-type ParentPkg = Pick<PkgAddress, 'nodeId' | 'installable' | 'pkgId'>
+type ParentPkg = Pick<PkgAddress, 'nodeId' | 'installable' | 'depPath'>
 
 export default async function resolveDependencies (
   ctx: ResolutionContext,
@@ -271,7 +270,7 @@ export default async function resolveDependencies (
           if (!resolveDependencyResult.isNew) return resolveDependencyResult
 
           const resolveChildren = async function (preferredVersions: PreferredVersions) {
-            const resolvedPackage = ctx.resolvedPackagesByPackageId[resolveDependencyResult.pkgId]
+            const resolvedPackage = ctx.resolvedPackagesByDepPath[resolveDependencyResult.depPath]
             const currentResolvedDependencies = extendedWantedDep.infoFromLockfile?.dependencyLockfile ? {
               ...extendedWantedDep.infoFromLockfile.dependencyLockfile.dependencies,
               ...extendedWantedDep.infoFromLockfile.dependencyLockfile.optionalDependencies,
@@ -307,7 +306,7 @@ export default async function resolveDependencies (
             ) as PkgAddress[]
             ctx.childrenByParentId[resolveDependencyResult.pkgId] = children.map((child) => ({
               alias: child.alias,
-              pkgId: child.pkgId,
+              depPath: child.depPath,
             }))
             ctx.dependenciesTree[resolveDependencyResult.nodeId] = {
               children: children.reduce((chn, child) => {
@@ -329,8 +328,8 @@ export default async function resolveDependencies (
     .filter(Boolean) as PkgAddress[]
 
   const newPreferredVersions = { ...preferredVersions }
-  for (const { pkgId } of pkgAddresses) {
-    const resolvedPackage = ctx.resolvedPackagesByPackageId[pkgId]
+  for (const { depPath } of pkgAddresses) {
+    const resolvedPackage = ctx.resolvedPackagesByDepPath[depPath]
     if (!resolvedPackage) continue // This will happen only with linked dependencies
     if (!newPreferredVersions[resolvedPackage.name]) {
       newPreferredVersions[resolvedPackage.name] = {}
@@ -551,20 +550,20 @@ async function resolveDependency (
           pref: wantedDependency.pref,
           version: wantedDependency.alias ? wantedDependency.pref : undefined,
         },
-        parents: nodeIdToParents(options.parentPkg.nodeId, ctx.resolvedPackagesByPackageId),
+        parents: nodeIdToParents(options.parentPkg.nodeId, ctx.resolvedPackagesByDepPath),
         prefix: ctx.prefix,
         reason: 'resolution_failure',
       })
       return null
     }
-    err.pkgsStack = nodeIdToParents(options.parentPkg.nodeId, ctx.resolvedPackagesByPackageId)
+    err.pkgsStack = nodeIdToParents(options.parentPkg.nodeId, ctx.resolvedPackagesByDepPath)
     throw err
   }
 
   dependencyResolvedLogger.debug({
     resolution: pkgResponse.body.id,
     wanted: {
-      dependentId: options.parentPkg.pkgId,
+      dependentId: options.parentPkg.depPath,
       name: wantedDependency.alias,
       rawSpec: wantedDependency.pref,
     },
@@ -595,6 +594,15 @@ async function resolveDependency (
     }
   }
 
+  let pkg: PackageManifest
+  let useManifestInfoFromLockfile = false
+  let prepare!: boolean
+  let hasBin!: boolean
+  pkg = ctx.readPackageHook
+    ? ctx.readPackageHook(pkgResponse.body.manifest ?? await pkgResponse.bundledManifest!())
+    : pkgResponse.body.manifest ?? await pkgResponse.bundledManifest!()
+  const depPath = dp.relative(ctx.registries, pkg.name, pkgResponse.body.id)
+
   // We are building the dependency tree only until there are new packages
   // or the packages repeat in a unique order.
   // This is needed later during peer dependencies resolution.
@@ -613,20 +621,12 @@ async function resolveDependency (
   if (
     nodeIdContainsSequence(
       options.parentPkg.nodeId,
-      options.parentPkg.pkgId,
-      pkgResponse.body.id
+      options.parentPkg.depPath,
+      depPath
     )
   ) {
     return null
   }
-
-  let pkg: PackageManifest
-  let useManifestInfoFromLockfile = false
-  let prepare!: boolean
-  let hasBin!: boolean
-  pkg = ctx.readPackageHook
-    ? ctx.readPackageHook(pkgResponse.body.manifest ?? await pkgResponse.bundledManifest!())
-    : pkgResponse.body.manifest ?? await pkgResponse.bundledManifest!()
 
   if (
     !options.update && currentPkg.dependencyLockfile && currentPkg.depPath &&
@@ -681,7 +681,7 @@ async function resolveDependency (
   // we only ever need to analyze one leaf dep in a graph, so the nodeId can be short and stateless.
   const nodeId = pkgIsLeaf(pkg)
     ? pkgResponse.body.id
-    : createNodeId(options.parentPkg.nodeId, pkgResponse.body.id)
+    : createNodeId(options.parentPkg.nodeId, depPath)
 
   const currentIsInstallable = (
     ctx.force ||
@@ -694,11 +694,11 @@ async function resolveDependency (
       })
   )
   const installable = parentIsInstallable && currentIsInstallable !== false
-  const isNew = !ctx.resolvedPackagesByPackageId[pkgResponse.body.id]
+  const isNew = !ctx.resolvedPackagesByDepPath[depPath]
 
   if (isNew) {
     if (currentIsInstallable !== true || !parentIsInstallable) {
-      ctx.skipped.add(pkgResponse.body.id)
+      ctx.skipped.add(depPath)
     }
     progressLogger.debug({
       packageId: pkgResponse.body.id,
@@ -720,9 +720,9 @@ async function resolveDependency (
         })
     }
 
-    ctx.resolvedPackagesByPackageId[pkgResponse.body.id] = getResolvedPackage({
+    ctx.resolvedPackagesByDepPath[depPath] = getResolvedPackage({
       dependencyLockfile: currentPkg.dependencyLockfile,
-      depPath: dp.relative(ctx.registries, pkg.name, pkgResponse.body.id),
+      depPath,
       force: ctx.force,
       hasBin,
       pkg,
@@ -731,9 +731,9 @@ async function resolveDependency (
       wantedDependency,
     })
   } else {
-    ctx.resolvedPackagesByPackageId[pkgResponse.body.id].prod = ctx.resolvedPackagesByPackageId[pkgResponse.body.id].prod || !wantedDependency.dev && !wantedDependency.optional
-    ctx.resolvedPackagesByPackageId[pkgResponse.body.id].dev = ctx.resolvedPackagesByPackageId[pkgResponse.body.id].dev || wantedDependency.dev
-    ctx.resolvedPackagesByPackageId[pkgResponse.body.id].optional = ctx.resolvedPackagesByPackageId[pkgResponse.body.id].optional && wantedDependency.optional
+    ctx.resolvedPackagesByDepPath[depPath].prod = ctx.resolvedPackagesByDepPath[depPath].prod || !wantedDependency.dev && !wantedDependency.optional
+    ctx.resolvedPackagesByDepPath[depPath].dev = ctx.resolvedPackagesByDepPath[depPath].dev || wantedDependency.dev
+    ctx.resolvedPackagesByDepPath[depPath].optional = ctx.resolvedPackagesByDepPath[depPath].optional && wantedDependency.optional
 
     if (ctx.dependenciesTree[nodeId]) {
       ctx.dependenciesTree[nodeId].depth = Math.min(ctx.dependenciesTree[nodeId].depth, options.currentDepth)
@@ -743,7 +743,7 @@ async function resolveDependency (
         depth: options.currentDepth,
         installable,
         nodeId,
-        resolvedPackage: ctx.resolvedPackagesByPackageId[pkgResponse.body.id],
+        resolvedPackage: ctx.resolvedPackagesByDepPath[depPath],
       })
     }
   }
@@ -751,6 +751,7 @@ async function resolveDependency (
   return {
     alias: wantedDependency.alias || pkg.name,
     depIsLinked,
+    depPath,
     isNew,
     nodeId,
     normalizedPref: options.currentDepth === 0 ? pkgResponse.body.normalizedPref : undefined,

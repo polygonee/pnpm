@@ -82,7 +82,7 @@ export default async function linkPackages (
     updateLockfileMinorVersion: boolean
     virtualStoreDir: string
     wantedLockfile: Lockfile
-    wantedToBeSkippedPackageIds: Set<string>
+    wantedToBeSkippedDepPaths: Set<string>
   }
 ): Promise<{
     currentLockfile: Lockfile
@@ -129,12 +129,12 @@ export default async function linkPackages (
     ? opts.afterAllResolvedHook(newLockfile)
     : newLockfile
 
-  let depNodes = R.values(depGraph).filter(({ depPath, packageId }) => {
+  let depNodes = R.values(depGraph).filter(({ depPath }) => {
     if (newWantedLockfile.packages?.[depPath] && !newWantedLockfile.packages[depPath].optional) {
       opts.skipped.delete(depPath)
       return true
     }
-    if (opts.wantedToBeSkippedPackageIds.has(packageId)) {
+    if (opts.wantedToBeSkippedDepPaths.has(depPath)) {
       opts.skipped.add(depPath)
       return false
     }

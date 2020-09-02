@@ -610,8 +610,8 @@ async function installInContext (
     dependenciesTree,
     outdatedDependencies,
     resolvedImporters,
-    resolvedPackagesByPackageId,
-    wantedToBeSkippedPackageIds,
+    resolvedPackagesByDepPath,
+    wantedToBeSkippedDepPaths,
   } = await resolveDependencies(
     projectsToResolve,
     {
@@ -722,7 +722,7 @@ async function installInContext (
       updateLockfileMinorVersion: opts.updateLockfileMinorVersion,
       virtualStoreDir: ctx.virtualStoreDir,
       wantedLockfile: ctx.wantedLockfile,
-      wantedToBeSkippedPackageIds,
+      wantedToBeSkippedDepPaths,
     }
   )
 
@@ -782,7 +782,7 @@ async function installInContext (
 
   // waiting till the skipped packages are downloaded to the store
   await Promise.all(
-    R.props<string, ResolvedPackage>(Array.from(wantedToBeSkippedPackageIds), resolvedPackagesByPackageId)
+    R.props<string, ResolvedPackage>(Array.from(wantedToBeSkippedDepPaths), resolvedPackagesByDepPath)
       // skipped packages might have not been reanalized on a repeat install
       // so lets just ignore those by excluding nulls
       .filter(Boolean)
@@ -790,7 +790,7 @@ async function installInContext (
   )
 
   // waiting till package requests are finished
-  await Promise.all(R.values(resolvedPackagesByPackageId).map(({ finishing }) => finishing()))
+  await Promise.all(R.values(resolvedPackagesByDepPath).map(({ finishing }) => finishing()))
 
   const lockfileOpts = { forceSharedFormat: opts.forceSharedLockfile }
   if (opts.lockfileOnly) {

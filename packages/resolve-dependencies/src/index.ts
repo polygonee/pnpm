@@ -17,7 +17,7 @@ import resolveDependencies, {
   PendingNode,
   PkgAddress,
   ResolvedPackage,
-  ResolvedPackagesByPackageId,
+  ResolvedPackagesByDepPath,
 } from './resolveDependencies'
 import R = require('ramda')
 
@@ -70,7 +70,7 @@ export default async function (
 ) {
   const directDepsByImporterId = {} as {[id: string]: Array<PkgAddress | LinkedDependency>}
 
-  const wantedToBeSkippedPackageIds = new Set<string>()
+  const wantedToBeSkippedDepPaths = new Set<string>()
   const ctx = {
     alwaysTryWorkspacePackages: (opts.linkWorkspacePackagesDepth ?? -1) >= 0,
     childrenByParentId: {} as ChildrenByParentId,
@@ -89,8 +89,8 @@ export default async function (
     pnpmVersion: opts.pnpmVersion,
     readPackageHook: opts.hooks.readPackage,
     registries: opts.registries,
-    resolvedPackagesByPackageId: {} as ResolvedPackagesByPackageId,
-    skipped: wantedToBeSkippedPackageIds,
+    resolvedPackagesByDepPath: {} as ResolvedPackagesByDepPath,
+    skipped: wantedToBeSkippedDepPaths,
     storeController: opts.storeController,
     updateMatching: opts.updateMatching,
     virtualStoreDir: opts.virtualStoreDir,
@@ -117,7 +117,7 @@ export default async function (
       parentPkg: {
         installable: true,
         nodeId: `>${importer.id}>`,
-        pkgId: importer.id,
+        depPath: importer.id,
       },
       proceed,
       resolvedDependencies: {
@@ -191,8 +191,8 @@ export default async function (
     dependenciesTree: ctx.dependenciesTree,
     outdatedDependencies: ctx.outdatedDependencies,
     resolvedImporters,
-    resolvedPackagesByPackageId: ctx.resolvedPackagesByPackageId,
-    wantedToBeSkippedPackageIds,
+    resolvedPackagesByDepPath: ctx.resolvedPackagesByDepPath,
+    wantedToBeSkippedDepPaths,
   }
 }
 
@@ -200,38 +200,38 @@ function buildTree (
   ctx: {
     childrenByParentId: ChildrenByParentId
     dependenciesTree: DependenciesTree
-    resolvedPackagesByPackageId: ResolvedPackagesByPackageId
+    resolvedPackagesByDepPath: ResolvedPackagesByDepPath
     skipped: Set<string>
   },
   parentNodeId: string,
   parentId: string,
-  children: Array<{alias: string, pkgId: string}>,
+  children: Array<{alias: string, depPath: string}>,
   depth: number,
   installable: boolean
 ) {
   const childrenNodeIds = {}
   for (const child of children) {
-    if (child.pkgId.startsWith('link:')) {
-      childrenNodeIds[child.alias] = child.pkgId
+    if (child.depPath.startsWith('link:')) {
+      childrenNodeIds[child.alias] = child.depPath
       continue
     }
-    if (nodeIdContainsSequence(parentNodeId, parentId, child.pkgId)) {
+    if (nodeIdContainsSequence(parentNodeId, parentId, child.depPath)) {
       continue
     }
-    const childNodeId = createNodeId(parentNodeId, child.pkgId)
+    const childNodeId = createNodeId(parentNodeId, child.depPath)
     childrenNodeIds[child.alias] = childNodeId
-    installable = installable && !ctx.skipped.has(child.pkgId)
+    installable = installable && !ctx.skipped.has(child.depPath)
     ctx.dependenciesTree[childNodeId] = {
       children: () => buildTree(ctx,
         childNodeId,
-        child.pkgId,
-        ctx.childrenByParentId[child.pkgId],
+        child.depPath,
+        ctx.childrenByParentId[child.depPath],
         depth + 1,
         installable
       ),
       depth,
       installable,
-      resolvedPackage: ctx.resolvedPackagesByPackageId[child.pkgId],
+      resolvedPackage: ctx.resolvedPackagesByDepPath[child.depPath],
     }
   }
   return childrenNodeIds
