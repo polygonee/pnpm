@@ -12,7 +12,7 @@ import * as dp from 'dependency-path'
 import getNpmTarballUrl from 'get-npm-tarball-url'
 import * as R from 'ramda'
 import depPathToRef from './depPathToRef'
-import { DependenciesGraph } from './resolvePeers'
+import { DependenciesGraph } from '.'
 import { ResolvedPackage } from './resolveDependencies'
 
 export default function (
@@ -113,10 +113,10 @@ function toLockfileDependency (
   if (!R.isEmpty(pkg.peerDependencies ?? {})) {
     result['peerDependencies'] = pkg.peerDependencies
   }
-  if (pkg.additionalInfo.peerDependenciesMeta) {
+  if (pkg.peerDependenciesMeta) {
     const normalizedPeerDependenciesMeta = {}
-    for (const peer of Object.keys(pkg.additionalInfo.peerDependenciesMeta)) {
-      if (pkg.additionalInfo.peerDependenciesMeta[peer].optional) {
+    for (const peer of Object.keys(pkg.peerDependenciesMeta)) {
+      if (pkg.peerDependenciesMeta[peer].optional) {
         normalizedPeerDependenciesMeta[peer] = { optional: true }
       }
     }
