@@ -1,9 +1,7 @@
 import PnpmError from '@pnpm/error'
 import logger from '@pnpm/logger'
 import pkgIdToFilename from '@pnpm/pkgid-to-filename'
-import { Resolution } from '@pnpm/resolver-base'
-import { PackageFilesResponse } from '@pnpm/store-controller-types'
-import { Dependencies, DependencyManifest } from '@pnpm/types'
+import { Dependencies } from '@pnpm/types'
 import {
   createNodeId,
   splitNodeId,
@@ -19,42 +17,16 @@ import path = require('path')
 import R = require('ramda')
 import semver = require('semver')
 
-export interface DependenciesGraphNode {
-  name: string
+export type DependenciesGraphNode = ResolvedPackage & {
   // at this point the version is really needed only for logging
-  version: string
-  hasBin: boolean
-  hasBundledDependencies: boolean
   modules: string
-  fetchingBundledManifest?: () => Promise<DependencyManifest>
-  fetchingFiles: () => Promise<PackageFilesResponse>
-  filesIndexFile: string
-  resolution: Resolution
   dir: string
   children: {[alias: string]: string}
-  optionalDependencies: Set<string>
   depth: number
   depPath: string
-  prod: boolean
-  dev: boolean
-  optional: boolean
-  packageId: string
+  peerDependencies?: Dependencies
   installable: boolean
-  additionalInfo: {
-    deprecated?: string
-    peerDependencies?: Dependencies
-    bundleDependencies?: string[]
-    bundledDependencies?: string[]
-    engines?: {
-      node?: string
-      npm?: string
-    }
-    cpu?: string[]
-    os?: string[]
-  }
   isBuilt?: boolean
-  requiresBuild?: boolean
-  prepare: boolean
   isPure: boolean
 }
 
@@ -268,22 +240,20 @@ function resolvePeersOfNode (
   }
 
   ctx.pathsByNodeId[nodeId] = depPath
+  const peerDependencies = { ...resolvedPackage.peerDependencies }
   if (!ctx.depGraph[depPath] || ctx.depGraph[depPath].depth > node.depth) {
     const dir = path.join(modules, resolvedPackage.name)
 
     const unknownPeers = Object.keys(unknownResolvedPeersOfChildren)
     if (unknownPeers.length) {
-      if (!resolvedPackage.additionalInfo.peerDependencies) {
-        resolvedPackage.additionalInfo.peerDependencies = {}
-      }
       for (const unknownPeer of unknownPeers) {
-        if (!resolvedPackage.additionalInfo.peerDependencies[unknownPeer]) {
-          resolvedPackage.additionalInfo.peerDependencies[unknownPeer] = '*'
+        if (!peerDependencies[unknownPeer]) {
+          peerDependencies[unknownPeer] = '*'
         }
       }
     }
     ctx.depGraph[depPath] = {
-      additionalInfo: resolvedPackage.additionalInfo,
+      ...(node.resolvedPackage as ResolvedPackage),
       children: Object.assign(
         getPreviouslyResolvedChildren(nodeId, ctx.dependenciesTree),
         children,
@@ -291,25 +261,11 @@ function resolvePeersOfNode (
       ),
       depPath,
       depth: node.depth,
-      dev: resolvedPackage.dev,
       dir,
-      fetchingBundledManifest: resolvedPackage.fetchingBundledManifest,
-      fetchingFiles: resolvedPackage.fetchingFiles,
-      filesIndexFile: resolvedPackage.filesIndexFile,
-      hasBin: resolvedPackage.hasBin,
-      hasBundledDependencies: resolvedPackage.hasBundledDependencies,
       installable: node.installable,
       isPure,
       modules,
-      name: resolvedPackage.name,
-      optional: resolvedPackage.optional,
-      optionalDependencies: resolvedPackage.optionalDependencies,
-      packageId: resolvedPackage.id,
-      prepare: resolvedPackage.prepare,
-      prod: resolvedPackage.prod,
-      requiresBuild: resolvedPackage.requiresBuild,
-      resolution: resolvedPackage.resolution,
-      version: resolvedPackage.version,
+      peerDependencies,
     }
   }
   return { resolvedPeers: allResolvedPeers, missingPeers: allMissingPeers }

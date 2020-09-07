@@ -188,7 +188,6 @@ export interface ResolvedPackage {
   requiresBuild: boolean | undefined // added to fix issue #1201
   additionalInfo: {
     deprecated?: string
-    peerDependencies?: Dependencies
     peerDependenciesMeta?: PeerDependenciesMeta
     bundleDependencies?: string[]
     bundledDependencies?: string[]
@@ -796,7 +795,6 @@ function getResolvedPackage (
       deprecated: options.pkg.deprecated,
       engines: options.pkg.engines,
       os: options.pkg.os,
-      peerDependencies,
       peerDependenciesMeta: options.pkg.peerDependenciesMeta,
     },
     depPath: options.depPath,
