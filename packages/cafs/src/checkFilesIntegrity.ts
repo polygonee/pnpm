@@ -99,6 +99,7 @@ async function verifyFile (
 
 async function isModified (filename: string) {
   const { birthtimeMs, mtimeMs } = await fs.stat(filename)
+  console.log(birthtimeMs, mtimeMs)
   // Sometimes modification time is a few milliseconds bigger than birthtime,
   // even if the files was never edited, so we round it up a bit.
   return (mtimeMs - birthtimeMs) > 50
