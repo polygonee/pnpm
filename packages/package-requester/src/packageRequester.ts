@@ -462,6 +462,7 @@ function fetchToStore (
           .map(async (filename) => {
             const fileIntegrity = await filesIndex[filename].generatingIntegrity
             integrity[filename] = {
+              birthtimeMs: filesIndex[filename].birthtimeMs,
               integrity: fileIntegrity.toString(), // TODO: use the raw Integrity object
               mode: filesIndex[filename].mode,
               size: filesIndex[filename].size,
