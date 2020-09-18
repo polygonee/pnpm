@@ -652,6 +652,7 @@ test('refetch package to store if it has been modified', async (t) => {
 
   // Adding some content to the file to change its integrity
   await fs.appendFile(indexJsFile, '// foobar')
+  await delay(100)
 
   const reporter = sinon.spy()
   streamParser.on('data', reporter)
