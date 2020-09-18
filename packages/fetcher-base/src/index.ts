@@ -31,6 +31,7 @@ export interface FetchResult {
 
 export interface FilesIndex {
   [filename: string]: {
+    birthtimeMs: number
     mode: number
     size: number
     generatingIntegrity: Promise<Integrity>

@@ -27,6 +27,7 @@ export default async function (
       }
       const generatingIntegrity = addStreamToCafs(fileStream, header.mode!)
       filesIndex[filename] = {
+        birthtimeMs: Date.now(),
         generatingIntegrity,
         mode: header.mode!,
         size: header.size,

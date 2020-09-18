@@ -56,6 +56,7 @@ async function _retrieveFileIntegrities (
           return cafs.addStream(fs.createReadStream(fullPath), stat.mode)
         })
         index[relativePath] = {
+          birthtimeMs: Date.now(),
           generatingIntegrity,
           mode: stat.mode,
           size: stat.size,
