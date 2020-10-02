@@ -43,7 +43,10 @@ import {
   write as writeModulesYaml,
 } from '@pnpm/modules-yaml'
 import pkgIdToFilename from '@pnpm/pkgid-to-filename'
-import { fromDir as readPackageFromDir } from '@pnpm/read-package-json'
+import {
+  fromDir as readPackageFromDir,
+  safeReadPackageFromDir,
+} from '@pnpm/read-package-json'
 import { readProjectManifestOnly } from '@pnpm/read-project-manifest'
 import {
   PackageFilesResponse,
@@ -63,6 +66,16 @@ const brokenModulesLogger = logger('_broken_node_modules')
 
 export type ReporterFunction = (logObj: LogBase) => void
 
+export interface Project {
+  binsDir: string
+  buildIndex: number
+  manifest: ProjectManifest
+  modulesDir: string
+  id: string
+  pruneDirectDependencies?: boolean
+  rootDir: string
+}
+
 export interface HeadlessOptions {
   childConcurrency?: number
   currentLockfile?: Lockfile
@@ -74,15 +87,7 @@ export interface HeadlessOptions {
   extraBinPaths?: string[]
   ignoreScripts: boolean
   include: IncludedDependencies
-  projects: Array<{
-    binsDir: string
-    buildIndex: number
-    manifest: ProjectManifest
-    modulesDir: string
-    id: string
-    pruneDirectDependencies?: boolean
-    rootDir: string
-  }>
+  projects: Project[]
   hoistedDependencies: HoistedDependencies
   hoistPattern?: string[]
   publicHoistPattern?: string[]
@@ -260,24 +265,24 @@ export default async (opts: HeadlessOptions) => {
     newHoistedDependencies = {}
   }
 
-  await Promise.all(opts.projects.map(async ({ rootDir, id, manifest, modulesDir }) => {
+  await Promise.all(opts.projects.map(async (project) => {
     if (opts.symlink !== false) {
       await linkRootPackages(filteredLockfile, {
-        importerId: id,
-        importerModulesDir: modulesDir,
+        importerId: project.id,
+        importerModulesDir: project.modulesDir,
         lockfileDir,
-        projectDir: rootDir,
+        projectDir: project.rootDir,
         projects: opts.projects,
         registries: opts.registries,
-        rootDependencies: directDependenciesByImporterId[id],
+        rootDependencies: directDependenciesByImporterId[project.id],
       })
     }
 
     // Even though headless installation will never update the package.json
     // this needs to be logged because otherwise install summary won't be printed
     packageManifestLogger.debug({
-      prefix: rootDir,
-      updated: manifest,
+      prefix: project.rootDir,
+      updated: project.manifest,
     })
   }))
 
@@ -328,7 +333,26 @@ export default async (opts: HeadlessOptions) => {
   }
 
   await linkAllBins(graph, { optional: opts.include.optionalDependencies, warn })
-  await Promise.all(opts.projects.map(linkBinsOfImporter))
+  await Promise.all(opts.projects.map(async (project) => {
+    if (opts.publicHoistPattern?.length && path.relative(opts.lockfileDir, project.rootDir) === '') {
+      await linkBinsOfImporter(project)
+    } else {
+      const directPkgDirs = Object.values(directDependenciesByImporterId[project.id])
+      await linkBinsOfPackages(
+        (
+          await Promise.all(
+            directPkgDirs.map(async (dir) => ({
+              location: dir,
+              manifest: await safeReadPackageFromDir(dir),
+            }))
+          )
+        )
+          .filter(({ manifest }) => manifest != null) as Array<{ location: string, manifest: DependencyManifest }>,
+        project.binsDir,
+        { warn: (message: string) => logger.info({ message, prefix: project.rootDir }) }
+      )
+    }
+  }))
 
   if (currentLockfile && !R.equals(opts.projects.map(({ id }) => id).sort(), Object.keys(filteredLockfile.importers).sort())) {
     Object.assign(filteredLockfile.packages, currentLockfile.packages)
@@ -370,11 +394,7 @@ export default async (opts: HeadlessOptions) => {
 }
 
 function linkBinsOfImporter (
-  { modulesDir, binsDir, rootDir }: {
-    binsDir: string
-    modulesDir: string
-    rootDir: string
-  }
+  { modulesDir, binsDir, rootDir }: Project
 ) {
   const warn = (message: string) => logger.info({ message, prefix: rootDir })
   return linkBins(modulesDir, binsDir, {
@@ -383,14 +403,14 @@ function linkBinsOfImporter (
   })
 }
 
-function linkRootPackages (
+async function linkRootPackages (
   lockfile: Lockfile,
   opts: {
     registries: Registries
     projectDir: string
     importerId: string
     importerModulesDir: string
-    projects: Array<{ id: string, manifest: ProjectManifest }>
+    projects: Project[]
     lockfileDir: string
     rootDependencies: {[alias: string]: string}
   }
