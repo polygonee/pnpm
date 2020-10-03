@@ -24,8 +24,8 @@ import {
 import logger, { streamParser } from '@pnpm/logger'
 import { getAllDependenciesFromManifest } from '@pnpm/manifest-utils'
 import { write as writeModulesYaml } from '@pnpm/modules-yaml'
+import { safeReadProjectManifestOnly } from '@pnpm/read-project-manifest'
 import readModulesDirs from '@pnpm/read-modules-dir'
-import { safeReadPackageFromDir } from '@pnpm/read-package-json'
 import { removeBin } from '@pnpm/remove-bins'
 import resolveDependencies, {
   DependenciesGraph,
@@ -745,7 +745,7 @@ async function installInContext (
             await Promise.all(
               directPkgs.map(async (dep) => ({
                 location: dep.dir,
-                manifest: await dep.fetchingBundledManifest?.() ?? await safeReadPackageFromDir(dep.dir),
+                manifest: await dep.fetchingBundledManifest?.() ?? await safeReadProjectManifestOnly(dep.dir),
               }))
             )
           )

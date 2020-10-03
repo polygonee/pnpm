@@ -43,11 +43,8 @@ import {
   write as writeModulesYaml,
 } from '@pnpm/modules-yaml'
 import pkgIdToFilename from '@pnpm/pkgid-to-filename'
-import {
-  fromDir as readPackageFromDir,
-  safeReadPackageFromDir,
-} from '@pnpm/read-package-json'
-import { readProjectManifestOnly } from '@pnpm/read-project-manifest'
+import { fromDir as readPackageFromDir } from '@pnpm/read-package-json'
+import { readProjectManifestOnly, safeReadProjectManifestOnly } from '@pnpm/read-project-manifest'
 import {
   PackageFilesResponse,
   StoreController,
@@ -343,7 +340,7 @@ export default async (opts: HeadlessOptions) => {
           await Promise.all(
             directPkgDirs.map(async (dir) => ({
               location: dir,
-              manifest: await safeReadPackageFromDir(dir),
+              manifest: await safeReadProjectManifestOnly(dir),
             }))
           )
         )
