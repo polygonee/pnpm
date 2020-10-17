@@ -241,10 +241,19 @@ export default async function resolveDependencies (
           const updateDepth = typeof extendedWantedDep.wantedDependency.updateDepth === 'number'
             ? extendedWantedDep.wantedDependency.updateDepth : options.updateDepth
           const updateShouldContinue = options.currentDepth <= updateDepth
-          const update = updateShouldContinue && (
-            !ctx.updateMatching ||
-            !extendedWantedDep.infoFromLockfile?.dependencyLockfile ||
-            ctx.updateMatching(extendedWantedDep.infoFromLockfile.dependencyLockfile.name ?? extendedWantedDep.wantedDependency.alias)
+          const update = (
+            updateShouldContinue && (
+              !ctx.updateMatching ||
+              !extendedWantedDep.infoFromLockfile?.dependencyLockfile ||
+              ctx.updateMatching(extendedWantedDep.infoFromLockfile.dependencyLockfile.name ?? extendedWantedDep.wantedDependency.alias)
+            )
+          ) || Boolean(
+            options.workspacePackages &&
+            wantedDepIsLocallyAvailable(
+              options.workspacePackages,
+              extendedWantedDep.wantedDependency,
+              { defaultTag: ctx.defaultTag, registry: ctx.registries.default }
+            )
           )
           const resolveDependencyOpts: ResolveDependencyOptions = {
             ...resolveDepOpts,
@@ -510,10 +519,6 @@ async function resolveDependency (
   ctx: ResolutionContext,
   options: ResolveDependencyOptions
 ): Promise<PkgAddress | LinkedDependency | null> {
-  const update = Boolean(
-    options.update ||
-    options.workspacePackages &&
-    wantedDepIsLocallyAvailable(options.workspacePackages, wantedDependency, { defaultTag: ctx.defaultTag, registry: ctx.registries.default }))
   const currentPkg = options.currentPkg ?? {}
 
   const currentLockfileContainsTheDep = currentPkg.depPath
@@ -535,8 +540,7 @@ async function resolveDependency (
     )
   )
 
-  const proceed = update || options.proceed || !currentPkg.resolution
-  if (!proceed && depIsLinked) {
+  if (!options.update && !options.proceed && currentPkg.resolution && depIsLinked) {
     return null
   }
 
@@ -555,7 +559,7 @@ async function resolveDependency (
       // Unfortunately, even when run with --lockfile-only, we need the *real* package.json
       // so fetching of the tarball cannot be ever avoided. Related issue: https://github.com/pnpm/pnpm/issues/1176
       skipFetch: false,
-      update,
+      update: options.update,
       workspacePackages: options.workspacePackages,
     })
   } catch (err) {
