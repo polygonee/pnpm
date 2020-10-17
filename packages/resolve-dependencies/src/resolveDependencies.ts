@@ -515,8 +515,6 @@ async function resolveDependency (
     options.workspacePackages &&
     wantedDepIsLocallyAvailable(options.workspacePackages, wantedDependency, { defaultTag: ctx.defaultTag, registry: ctx.registries.default }))
   const currentPkg = options.currentPkg ?? {}
-  const proceed = update || options.proceed || !currentPkg.resolution
-  const parentIsInstallable = options.parentPkg.installable === undefined || options.parentPkg.installable
 
   const currentLockfileContainsTheDep = currentPkg.depPath
     ? Boolean(ctx.currentLockfile.packages?.[currentPkg.depPath]) : undefined
@@ -524,10 +522,20 @@ async function resolveDependency (
     // if package is not in `node_modules/.pnpm-lock.yaml`
     // we can safely assume that it doesn't exist in `node_modules`
     currentLockfileContainsTheDep &&
-    currentPkg.depPath && currentPkg.dependencyLockfile &&
-    await exists(path.join(ctx.virtualStoreDir, `${pkgIdToFilename(currentPkg.depPath, ctx.prefix)}/node_modules/${nameVerFromPkgSnapshot(currentPkg.depPath, currentPkg.dependencyLockfile).name}/package.json`)) &&
-    (options.currentDepth > 0 || wantedDependency.alias && await exists(path.join(ctx.modulesDir, wantedDependency.alias))))
+    currentPkg.depPath &&
+    currentPkg.dependencyLockfile &&
+    await exists(
+      path.join(
+        ctx.virtualStoreDir,
+        pkgIdToFilename(currentPkg.depPath, ctx.prefix),
+        'node_modules',
+        nameVerFromPkgSnapshot(currentPkg.depPath, currentPkg.dependencyLockfile).name,
+        'package.json'
+      )
+    )
+  )
 
+  const proceed = update || options.proceed || !currentPkg.resolution
   if (!proceed && depIsLinked) {
     return null
   }
@@ -703,6 +711,7 @@ async function resolveDependency (
         pnpmVersion: ctx.pnpmVersion,
       })
   )
+  const parentIsInstallable = options.parentPkg.installable === undefined || options.parentPkg.installable
   const installable = parentIsInstallable && currentIsInstallable !== false
   const isNew = !ctx.resolvedPackagesByDepPath[depPath]
 
