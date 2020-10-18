@@ -312,16 +312,13 @@ async function resolveDependenciesOfDependency (
   }
   if (!resolveDependencyResult.isNew) return resolveDependencyResult
 
-  const workspacePackages = options.workspacePackages && ctx.linkWorkspacePackagesDepth > options.currentDepth
-    ? options.workspacePackages : undefined
   postponedResolutionsQueue.push(async (preferredVersions) =>
     resolveChildren(
       ctx,
       resolveDependencyResult,
       extendedWantedDep.infoFromLockfile?.dependencyLockfile,
-      workspacePackages,
+      options.workspacePackages,
       options.currentDepth,
-      options.currentDepth + 1,
       updateDepth,
       preferredVersions
     )
@@ -336,7 +333,6 @@ async function resolveChildren (
   dependencyLockfile: PackageSnapshot | undefined,
   workspacePackages: WorkspacePackages | undefined,
   parentDepth: number,
-  currentDepth: number,
   updateDepth: number,
   preferredVersions: PreferredVersions
 ) {
@@ -362,9 +358,11 @@ async function resolveChildren (
     resolvedDependencies,
     useManifestInfoFromLockfile: parentPkg.useManifestInfoFromLockfile,
   })
+  workspacePackages = workspacePackages && ctx.linkWorkspacePackagesDepth > parentDepth
+    ? workspacePackages : undefined
   const children = await resolveDependencies(ctx, preferredVersions, wantedDependencies,
     {
-      currentDepth,
+      currentDepth: parentDepth + 1,
       parentPkg,
       preferredDependencies: currentResolvedDependencies,
       // If the package is not linked, we should also gather information about its dependencies.
