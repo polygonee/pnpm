@@ -159,7 +159,6 @@ export type PkgAddress = {
   pkg: PackageManifest
   version?: string
   updated: boolean
-  useManifestInfoFromLockfile: boolean
 } & ({
   isLinkedDependency: true
   version: string
@@ -343,9 +342,6 @@ async function resolveChildren (
   const resolvedDependencies = parentPkg.updated
     ? undefined
     : currentResolvedDependencies
-  const optionalDependencyNames = Object.keys(
-    dependencyLockfile?.optionalDependencies ?? {}
-  )
   const parentDependsOnPeer = Boolean(
     Object.keys(
       dependencyLockfile?.peerDependencies ??
@@ -353,11 +349,7 @@ async function resolveChildren (
       {}
     ).length
   )
-  const wantedDependencies = getWantedDependencies(parentPkg.pkg, {
-    optionalDependencyNames,
-    resolvedDependencies,
-    useManifestInfoFromLockfile: parentPkg.useManifestInfoFromLockfile,
-  })
+  const wantedDependencies = getNonDevWantedDependencies(parentPkg.pkg)
   workspacePackages = workspacePackages && ctx.linkWorkspacePackagesDepth > parentDepth
     ? workspacePackages : undefined
   const children = await resolveDependencies(ctx, preferredVersions, wantedDependencies,
@@ -662,7 +654,6 @@ async function resolveDependency (
   }
 
   let pkg: PackageManifest
-  let useManifestInfoFromLockfile = false
   let prepare!: boolean
   let hasBin!: boolean
   pkg = ctx.readPackageHook
@@ -706,7 +697,6 @@ async function resolveDependency (
     // This can be removed if we implement something like peerDependenciesMeta.transitive: true
     !currentPkg.dependencyLockfile.peerDependencies
   ) {
-    useManifestInfoFromLockfile = true
     prepare = currentPkg.dependencyLockfile.prepare === true
     hasBin = currentPkg.dependencyLockfile.hasBin === true
     pkg = {
@@ -830,7 +820,6 @@ async function resolveDependency (
     isLinkedDependency: undefined,
     pkg,
     updated: pkgResponse.body.updated,
-    useManifestInfoFromLockfile,
   }
 }
 
@@ -906,24 +895,4 @@ function peerDependenciesWithoutOwn (pkg: PackageManifest) {
   }
   if (R.isEmpty(result)) return undefined
   return result
-}
-
-function getWantedDependencies (
-  pkg: PackageManifest,
-  opts: {
-    resolvedDependencies?: ResolvedDependencies
-    optionalDependencyNames?: string[]
-    useManifestInfoFromLockfile: boolean
-  }
-) {
-  let deps = getNonDevWantedDependencies(pkg)
-  if (!deps.length && opts.resolvedDependencies && opts.useManifestInfoFromLockfile) {
-    const optionalDependencyNames = opts.optionalDependencyNames ?? []
-    deps = Object.keys(opts.resolvedDependencies)
-      .map((depName) => ({
-        alias: depName,
-        optional: optionalDependencyNames.includes(depName),
-      } as WantedDependency))
-  }
-  return deps
 }
