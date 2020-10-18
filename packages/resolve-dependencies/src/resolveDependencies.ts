@@ -318,6 +318,7 @@ async function resolveDependenciesOfDependency (
       resolveDependencyResult,
       extendedWantedDep.infoFromLockfile?.dependencyLockfile,
       options,
+      options.currentDepth + 1,
       updateDepth,
       preferredVersions
     )
@@ -331,6 +332,7 @@ async function resolveChildren (
   parentPkg: PkgAddress,
   dependencyLockfile: PackageSnapshot | undefined,
   options: ResolvedDependenciesOptions,
+  currentDepth: number,
   updateDepth: number,
   preferredVersions: PreferredVersions
 ) {
@@ -361,7 +363,7 @@ async function resolveChildren (
       useManifestInfoFromLockfile: parentPkg.useManifestInfoFromLockfile,
     }),
     {
-      currentDepth: options.currentDepth + 1,
+      currentDepth,
       parentPkg,
       preferredDependencies: parentPkg.updated
         ? currentResolvedDependencies
@@ -373,14 +375,14 @@ async function resolveChildren (
       updateDepth,
       workspacePackages,
     }
-  ) as PkgAddress[]
+  )
   ctx.childrenByParentDepPath[parentPkg.depPath] = children.map((child) => ({
     alias: child.alias,
     depPath: child.depPath,
   }))
   ctx.dependenciesTree[parentPkg.nodeId] = {
     children: children.reduce((chn, child) => {
-      chn[child.alias] = child.nodeId ?? child.pkgId
+      chn[child.alias] = child['nodeId'] ?? child.pkgId
       return chn
     }, {}),
     depth: options.currentDepth,
