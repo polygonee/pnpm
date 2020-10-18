@@ -313,7 +313,14 @@ async function resolveDependenciesOfDependency (
   if (!resolveDependencyResult.isNew) return resolveDependencyResult
 
   postponedResolutionsQueue.push(async (preferredVersions) =>
-    resolveChildren(ctx, resolveDependencyResult, extendedWantedDep.infoFromLockfile, options, updateDepth, preferredVersions)
+    resolveChildren(
+      ctx,
+      resolveDependencyResult,
+      extendedWantedDep.infoFromLockfile?.dependencyLockfile,
+      options,
+      updateDepth,
+      preferredVersions
+    )
   )
 
   return resolveDependencyResult
@@ -321,63 +328,63 @@ async function resolveDependenciesOfDependency (
 
 async function resolveChildren (
   ctx: ResolutionContext,
-  resolveDependencyResult: PkgAddress,
-  infoFromLockfile: InfoFromLockfile | undefined,
+  parentPkg: PkgAddress,
+  dependencyLockfile: PackageSnapshot | undefined,
   options: ResolvedDependenciesOptions,
   updateDepth: number,
   preferredVersions: PreferredVersions
 ) {
-  const resolvedPackage = ctx.resolvedPackagesByDepPath[resolveDependencyResult.depPath]
-  const currentResolvedDependencies = infoFromLockfile?.dependencyLockfile ? {
-    ...infoFromLockfile.dependencyLockfile.dependencies,
-    ...infoFromLockfile.dependencyLockfile.optionalDependencies,
+  const resolvedPackage = ctx.resolvedPackagesByDepPath[parentPkg.depPath]
+  const currentResolvedDependencies = dependencyLockfile ? {
+    ...dependencyLockfile.dependencies,
+    ...dependencyLockfile.optionalDependencies,
   } : undefined
-  const resolvedDependencies = resolveDependencyResult.updated
+  const resolvedDependencies = parentPkg.updated
     ? undefined
     : currentResolvedDependencies
   const optionalDependencyNames = Object.keys(
-    infoFromLockfile?.dependencyLockfile?.optionalDependencies ?? {}
+    dependencyLockfile?.optionalDependencies ?? {}
   )
   const workspacePackages = options.workspacePackages && ctx.linkWorkspacePackagesDepth > options.currentDepth
     ? options.workspacePackages : undefined
   const parentDependsOnPeer = Boolean(
     Object.keys(
-      infoFromLockfile?.dependencyLockfile?.peerDependencies ??
-      resolveDependencyResult.pkg.peerDependencies ??
+      dependencyLockfile?.peerDependencies ??
+      parentPkg.pkg.peerDependencies ??
       {}
     ).length
   )
   const children = await resolveDependencies(ctx, preferredVersions,
-    getWantedDependencies(resolveDependencyResult.pkg, {
+    getWantedDependencies(parentPkg.pkg, {
       optionalDependencyNames,
       resolvedDependencies,
-      useManifestInfoFromLockfile: resolveDependencyResult.useManifestInfoFromLockfile,
+      useManifestInfoFromLockfile: parentPkg.useManifestInfoFromLockfile,
     }),
     {
       currentDepth: options.currentDepth + 1,
-      parentPkg: resolveDependencyResult,
-      preferredDependencies: resolveDependencyResult.updated
+      parentPkg,
+      preferredDependencies: parentPkg.updated
         ? currentResolvedDependencies
         : undefined,
       // If the package is not linked, we should also gather information about its dependencies.
       // After linking the package we'll need to symlink its dependencies.
-      proceed: !resolveDependencyResult.depIsLinked || parentDependsOnPeer,
+      proceed: !parentPkg.depIsLinked || parentDependsOnPeer,
       resolvedDependencies,
       updateDepth,
       workspacePackages,
     }
   ) as PkgAddress[]
-  ctx.childrenByParentDepPath[resolveDependencyResult.depPath] = children.map((child) => ({
+  ctx.childrenByParentDepPath[parentPkg.depPath] = children.map((child) => ({
     alias: child.alias,
     depPath: child.depPath,
   }))
-  ctx.dependenciesTree[resolveDependencyResult.nodeId] = {
+  ctx.dependenciesTree[parentPkg.nodeId] = {
     children: children.reduce((chn, child) => {
       chn[child.alias] = child.nodeId ?? child.pkgId
       return chn
     }, {}),
     depth: options.currentDepth,
-    installable: resolveDependencyResult.installable,
+    installable: parentPkg.installable,
     resolvedPackage,
   }
 }
