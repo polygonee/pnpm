@@ -366,9 +366,7 @@ async function resolveChildren (
     {
       currentDepth,
       parentPkg,
-      preferredDependencies: parentPkg.updated
-        ? currentResolvedDependencies
-        : undefined,
+      preferredDependencies: currentResolvedDependencies,
       // If the package is not linked, we should also gather information about its dependencies.
       // After linking the package we'll need to symlink its dependencies.
       proceed: !parentPkg.depIsLinked || parentDependsOnPeer,
