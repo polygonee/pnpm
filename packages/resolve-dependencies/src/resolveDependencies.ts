@@ -312,59 +312,74 @@ async function resolveDependenciesOfDependency (
   }
   if (!resolveDependencyResult.isNew) return resolveDependencyResult
 
-  const resolveChildren = async function (preferredVersions: PreferredVersions) {
-    const resolvedPackage = ctx.resolvedPackagesByDepPath[resolveDependencyResult.depPath]
-    const currentResolvedDependencies = extendedWantedDep.infoFromLockfile?.dependencyLockfile ? {
-      ...extendedWantedDep.infoFromLockfile.dependencyLockfile.dependencies,
-      ...extendedWantedDep.infoFromLockfile.dependencyLockfile.optionalDependencies,
-    } : undefined
-    const resolvedDependencies = resolveDependencyResult.updated
-      ? undefined
-      : currentResolvedDependencies
-    const optionalDependencyNames = Object.keys(extendedWantedDep.infoFromLockfile?.dependencyLockfile?.optionalDependencies ?? {})
-    const workspacePackages = options.workspacePackages && ctx.linkWorkspacePackagesDepth > options.currentDepth
-      ? options.workspacePackages : undefined
-    const parentDependsOnPeer = Boolean(
-      Object.keys(resolveDependencyOpts.currentPkg?.dependencyLockfile?.peerDependencies ?? resolveDependencyResult.pkg.peerDependencies ?? {}).length
-    )
-    const children = await resolveDependencies(ctx, preferredVersions,
-      getWantedDependencies(resolveDependencyResult.pkg, {
-        optionalDependencyNames,
-        resolvedDependencies,
-        useManifestInfoFromLockfile: resolveDependencyResult.useManifestInfoFromLockfile,
-      }),
-      {
-        currentDepth: options.currentDepth + 1,
-        parentPkg: resolveDependencyResult,
-        preferredDependencies: resolveDependencyResult.updated
-          ? currentResolvedDependencies
-          : undefined,
-        // If the package is not linked, we should also gather information about its dependencies.
-        // After linking the package we'll need to symlink its dependencies.
-        proceed: !resolveDependencyResult.depIsLinked || parentDependsOnPeer,
-        resolvedDependencies,
-        updateDepth,
-        workspacePackages,
-      }
-    ) as PkgAddress[]
-    ctx.childrenByParentDepPath[resolveDependencyResult.depPath] = children.map((child) => ({
-      alias: child.alias,
-      depPath: child.depPath,
-    }))
-    ctx.dependenciesTree[resolveDependencyResult.nodeId] = {
-      children: children.reduce((chn, child) => {
-        chn[child.alias] = child.nodeId ?? child.pkgId
-        return chn
-      }, {}),
-      depth: options.currentDepth,
-      installable: resolveDependencyResult.installable,
-      resolvedPackage,
-    }
-  }
-
-  postponedResolutionsQueue.push(resolveChildren)
+  postponedResolutionsQueue.push(async (preferredVersions) =>
+    resolveChildren(ctx, resolveDependencyResult, extendedWantedDep.infoFromLockfile, options, updateDepth, preferredVersions)
+  )
 
   return resolveDependencyResult
+}
+
+async function resolveChildren (
+  ctx: ResolutionContext,
+  resolveDependencyResult: PkgAddress,
+  infoFromLockfile: InfoFromLockfile | undefined,
+  options: ResolvedDependenciesOptions,
+  updateDepth: number,
+  preferredVersions: PreferredVersions
+) {
+  const resolvedPackage = ctx.resolvedPackagesByDepPath[resolveDependencyResult.depPath]
+  const currentResolvedDependencies = infoFromLockfile?.dependencyLockfile ? {
+    ...infoFromLockfile.dependencyLockfile.dependencies,
+    ...infoFromLockfile.dependencyLockfile.optionalDependencies,
+  } : undefined
+  const resolvedDependencies = resolveDependencyResult.updated
+    ? undefined
+    : currentResolvedDependencies
+  const optionalDependencyNames = Object.keys(
+    infoFromLockfile?.dependencyLockfile?.optionalDependencies ?? {}
+  )
+  const workspacePackages = options.workspacePackages && ctx.linkWorkspacePackagesDepth > options.currentDepth
+    ? options.workspacePackages : undefined
+  const parentDependsOnPeer = Boolean(
+    Object.keys(
+      infoFromLockfile?.dependencyLockfile?.peerDependencies ??
+      resolveDependencyResult.pkg.peerDependencies ??
+      {}
+    ).length
+  )
+  const children = await resolveDependencies(ctx, preferredVersions,
+    getWantedDependencies(resolveDependencyResult.pkg, {
+      optionalDependencyNames,
+      resolvedDependencies,
+      useManifestInfoFromLockfile: resolveDependencyResult.useManifestInfoFromLockfile,
+    }),
+    {
+      currentDepth: options.currentDepth + 1,
+      parentPkg: resolveDependencyResult,
+      preferredDependencies: resolveDependencyResult.updated
+        ? currentResolvedDependencies
+        : undefined,
+      // If the package is not linked, we should also gather information about its dependencies.
+      // After linking the package we'll need to symlink its dependencies.
+      proceed: !resolveDependencyResult.depIsLinked || parentDependsOnPeer,
+      resolvedDependencies,
+      updateDepth,
+      workspacePackages,
+    }
+  ) as PkgAddress[]
+  ctx.childrenByParentDepPath[resolveDependencyResult.depPath] = children.map((child) => ({
+    alias: child.alias,
+    depPath: child.depPath,
+  }))
+  ctx.dependenciesTree[resolveDependencyResult.nodeId] = {
+    children: children.reduce((chn, child) => {
+      chn[child.alias] = child.nodeId ?? child.pkgId
+      return chn
+    }, {}),
+    depth: options.currentDepth,
+    installable: resolveDependencyResult.installable,
+    resolvedPackage,
+  }
 }
 
 function getDepsToResolve (
