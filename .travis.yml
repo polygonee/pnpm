@@ -2,13 +2,14 @@ language: node_js
 node_js:
   - 10.16
   - 12.18.2
+  - 15
 git:
   depth: 5
 sudo: false
 before_install:
   - npm set verify-store-integrity false
   - git fetch --unshallow
-  - curl -L https://raw.githubusercontent.com/pnpm/self-installer/master/install.js | PNPM_VERSION=1.33.2 node
+  - curl -L https://raw.githubusercontent.com/pnpm/self-installer/master/install.js | PNPM_VERSION=5.9.3 node
   # Testing whether pnpm can upgrade itself
   - npm install --global npm@latest
   - pnpm i -g pnpm@next
