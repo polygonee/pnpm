@@ -177,7 +177,10 @@ Do you want to continue?`,
         }
       }
 
-      const { status } = runNpm(opts.npmPath, ['publish', '--ignore-scripts', ...args])
+      const { status } = runNpm(opts.npmPath,
+        ['publish', '--ignore-scripts', ...args],
+        { cwd: opts.dir }
+      )
       if (!opts.ignoreScripts) {
         await _runScriptsIfPresent([
           'publish',

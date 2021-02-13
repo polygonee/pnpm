@@ -3,10 +3,14 @@ import path = require('path')
 import spawn = require('cross-spawn')
 import PATH = require('path-name')
 
-export default function runNpm (npmPath: string | undefined, args: string[]) {
+export default function runNpm (
+  npmPath: string | undefined,
+  args: string[],
+  opts?: { cwd?: string }
+) {
   const npm = npmPath ?? 'npm'
   return runScriptSync(npm, args, {
-    cwd: process.cwd(),
+    cwd: opts?.cwd ?? process.cwd(),
     stdio: 'inherit',
     userAgent: undefined,
   })

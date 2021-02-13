@@ -603,8 +603,8 @@ test('publish: ignores all the lifecycle scripts when --ignore-scripts is used',
 
 test('publish: with specified publish branch name', async () => {
   prepare({
-    name: 'test-publish-package.json',
-    version: '0.0.2',
+    name: 'test-publish-package2.json',
+    version: '0.0.0',
   })
 
   const branch = 'some-random-publish-branch'
