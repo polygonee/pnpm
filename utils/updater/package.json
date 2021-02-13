@@ -6,10 +6,11 @@
     "compile": "tsc"
   },
   "dependencies": {
-    "@pnpm/lockfile-file": "workspace:3.2.0",
-    "@pnpm/types": "workspace:6.4.0",
+    "@pnpm/lockfile-file": "3.2.0",
+    "@pnpm/logger": "^3.2.3",
+    "@pnpm/types": "6.4.0",
     "@types/normalize-path": "^3.0.0",
-    "is-subdir": "^1.1.1",
+    "is-subdir": "^1.2.0",
     "normalize-path": "^3.0.0",
     "path-exists": "^4.0.0",
     "write-json-file": "^4.3.0"

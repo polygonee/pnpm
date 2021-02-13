@@ -18,7 +18,7 @@
   "devDependencies": {
     "@pnpm/assert-project": "workspace:*",
     "@pnpm/client": "workspace:2.0.21",
-    "@pnpm/logger": "^3.2.3",
+    "@pnpm/logger": "^4.0.0-0",
     "@pnpm/package-store": "workspace:10.1.17",
     "@pnpm/read-projects-context": "workspace:4.0.15",
     "@pnpm/store-path": "5.0.0-0",
@@ -56,7 +56,7 @@
     "commitmsg": "commitlint -e",
     "lint": "eslint -c ../../eslint.json src/**/*.ts test/**/*.ts",
     "registry-mock": "registry-mock",
-    "test:jest": "jest",
+    "test:jest": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:e2e": "registry-mock prepare && run-p -r registry-mock test:jest",
     "pre_test": "ts-node test/pretest",
     "_test": "cross-env PNPM_REGISTRY_MOCK_PORT=7770 pnpm run test:e2e",
@@ -94,5 +94,6 @@
     "ramda": "^0.27.1",
     "realpath-missing": "^1.1.0"
   },
-  "funding": "https://opencollective.com/pnpm"
+  "funding": "https://opencollective.com/pnpm",
+  "type": "module"
 }

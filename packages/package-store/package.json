@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@pnpm/client": "workspace:2.0.21",
-    "@pnpm/logger": "^3.2.3",
+    "@pnpm/logger": "^4.0.0-0",
     "@types/ramda": "^0.27.35",
     "@types/ssri": "^7.1.0",
     "tempy": "^1.0.0"
@@ -64,10 +64,11 @@
     "fix": "tslint -c tslint.json src/**/*.ts test/**/*.ts --fix",
     "lint": "eslint -c ../../eslint.json src/**/*.ts test/**/*.ts",
     "pretest": "rimraf .tmp",
-    "_test": "jest",
+    "_test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test": "pnpm run compile && pnpm run _test",
     "prepublishOnly": "pnpm run compile",
     "compile": "rimraf lib tsconfig.tsbuildinfo && tsc --build"
   },
-  "funding": "https://opencollective.com/pnpm"
+  "funding": "https://opencollective.com/pnpm",
+  "type": "module"
 }

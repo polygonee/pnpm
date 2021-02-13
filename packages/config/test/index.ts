@@ -7,6 +7,9 @@ import './findBestGlobalPrefixOnWindows'
 import { promises as fs } from 'fs'
 import path from 'path'
 import symlinkDir from 'symlink-dir'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // To override any local settings,
 // we force the default values of config

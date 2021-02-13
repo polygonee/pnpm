@@ -15,7 +15,7 @@
     "lint": "eslint -c ../../eslint.json src/**/*.ts test/**/*.ts",
     "pre_test": "ncp test/fixtures test/fixtures_for_testing",
     "post_test": "rimraf test/fixtures_for_testing",
-    "_test": "jest",
+    "_test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test": "pnpm run compile && pnpm run _test",
     "prepublishOnly": "pnpm run compile",
     "fix": "tslint -c tslint.json --project . --fix",
@@ -56,5 +56,6 @@
     "path-exists": "^4.0.0",
     "tempy": "^1.0.0"
   },
-  "funding": "https://opencollective.com/pnpm"
+  "funding": "https://opencollective.com/pnpm",
+  "type": "module"
 }

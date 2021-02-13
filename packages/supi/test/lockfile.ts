@@ -1212,26 +1212,15 @@ test('a lockfile with merge conflicts is autofixed', async () => {
 importers:
   .:
     dependencies:
-<<<<<<< HEAD
       dep-of-pkg-with-1-dep: 100.0.0
-=======
-      dep-of-pkg-with-1-dep: 100.1.0
->>>>>>> next
     specifiers:
       dep-of-pkg-with-1-dep: '>100.0.0'
 lockfileVersion: ${LOCKFILE_VERSION}
 packages:
-<<<<<<< HEAD
   /dep-of-pkg-with-1-dep/100.0.0:
     dev: false
     resolution:
       integrity: ${getIntegrity('dep-of-pkg-with-1-dep', '100.0.0')}
-=======
-  /dep-of-pkg-with-1-dep/100.1.0:
-    dev: false
-    resolution:
-      integrity: ${getIntegrity('dep-of-pkg-with-1-dep', '100.1.0')}
->>>>>>> next`, 'utf8')
 
   await install({
     dependencies: {

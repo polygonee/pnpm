@@ -5,6 +5,9 @@ import { ProjectManifest } from '@pnpm/types'
 import { sync as writeJson5File } from 'write-json5-file'
 import { sync as writeYamlFile } from 'write-yaml-file'
 import writePkg from 'write-pkg'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export { Modules, Project }
 export type ManifestFormat = 'JSON' | 'JSON5' | 'YAML'
