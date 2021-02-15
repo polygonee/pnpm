@@ -81,7 +81,7 @@
     "chalk": "^4.1.0",
     "enquirer": "^2.3.6",
     "is-ci": "^2.0.0",
-    "is-subdir": "^1.1.1",
+    "is-subdir": "^1.2.0",
     "mem": "^8.0.0",
     "p-filter": "^2.1.0",
     "p-limit": "^3.1.0",
@@ -94,7 +94,7 @@
     "version-selector-type": "^3.0.0"
   },
   "peerDependencies": {
-    "@pnpm/logger": "^3.2.3"
+    "@pnpm/logger": "^4.0.0-0"
   },
   "funding": "https://opencollective.com/pnpm",
   "type": "module"

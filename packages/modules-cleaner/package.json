@@ -10,7 +10,7 @@
     "!*.map"
   ],
   "peerDependencies": {
-    "@pnpm/logger": "^3.2.3"
+    "@pnpm/logger": "^4.0.0-0"
   },
   "keywords": [],
   "license": "MIT",
