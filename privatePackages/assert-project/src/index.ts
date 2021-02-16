@@ -82,8 +82,8 @@ export default (projectPath: string, encodedRegistryName?: string): Project => {
   // eslint-disable-next-line
   const notOk = (value: any) => expect(value).toBeFalsy()
   return {
-    requireModule (pkgName: string) {
-      return import(path.join(modules, pkgName))
+    async requireModule (pkgName: string) {
+      return (await import(path.join(modules, pkgName))).default
     },
     async has (pkgName: string, _modulesDir?: string) {
       const md = _modulesDir ? path.join(projectPath, _modulesDir) : modules

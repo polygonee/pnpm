@@ -3012,18 +3012,18 @@ importers:
       '@pnpm/tsconfig': 'link:'
   utils/updater:
     dependencies:
-      '@pnpm/lockfile-file': link:../../packages/lockfile-file
-      '@pnpm/logger': 4.0.0-0
-      '@pnpm/types': link:../../packages/types
+      '@pnpm/lockfile-file': 3.2.0_@pnpm+logger@3.2.3
+      '@pnpm/logger': 3.2.3
+      '@pnpm/types': 6.4.0
       '@types/normalize-path': 3.0.0
       is-subdir: 1.2.0
       normalize-path: 3.0.0
       path-exists: 4.0.0
       write-json-file: 4.3.0
     specifiers:
-      '@pnpm/lockfile-file': workspace:3.2.0
-      '@pnpm/logger': ^4.0.0-0
-      '@pnpm/types': workspace:6.4.0
+      '@pnpm/lockfile-file': 3.2.0
+      '@pnpm/logger': '3'
+      '@pnpm/types': 6.4.0
       '@types/normalize-path': ^3.0.0
       is-subdir: ^1.2.0
       normalize-path: ^3.0.0
@@ -4149,7 +4149,6 @@ packages:
     resolution:
       integrity: sha512-UfxE0oOcVPqWqIii49Y5hpjBt+4Zq8wLESMtpTXPb7aTTqpAvrZQ3REnljAYFHaX/seg+xJ6tAI0iz/QD0ohrQ==
   /@pnpm/constants/4.1.0:
-    dev: true
     engines:
       node: '>=10.16'
     resolution:
@@ -4191,7 +4190,6 @@ packages:
     resolution:
       integrity: sha512-NBuJxEAFlTliYGsYRFPm5JGJjUY1m6HpgAHHUoHL0u/jkYO7tfEOzVZMCwyx4Pdf8Yq5fn4Zwi6BfBTnZwcYAw==
   /@pnpm/error/1.4.0:
-    dev: true
     engines:
       node: '>=10.16'
     resolution:
@@ -4248,11 +4246,38 @@ packages:
       node: '>=10.16'
     resolution:
       integrity: sha512-xHTzK9WlCfvoNQwmFsTcPKRMguhrClXc/9f1ywrBRpHDRfZzcIX8hh3ZNr1kKL5CBeMM/Db2mDfpqo9hs+UuXQ==
+  /@pnpm/lockfile-file/3.2.0_@pnpm+logger@3.2.3:
+    dependencies:
+      '@pnpm/constants': 4.1.0
+      '@pnpm/error': 1.4.0
+      '@pnpm/lockfile-types': 2.2.0
+      '@pnpm/logger': 3.2.3
+      '@pnpm/merge-lockfile-changes': 1.0.1
+      '@pnpm/types': 6.4.0
+      '@zkochan/rimraf': 1.0.0
+      js-yaml: 4.0.0
+      mz: 2.7.0
+      normalize-path: 3.0.0
+      ramda: 0.27.1
+      strip-bom: 4.0.0
+      write-file-atomic: 3.0.3
+    dev: false
+    engines:
+      node: '>=10.16'
+    peerDependencies:
+      '@pnpm/logger': ^3.2.3
+    resolution:
+      integrity: sha512-ZjO/MAB8znWnbfo2kxxIwzyeZS9w/OuhJa9S3eWryjS38WDYkjC+KD3vKcdrgJZ9prol426ZLqe/4JWUBkrqbQ==
+  /@pnpm/lockfile-types/2.2.0:
+    dev: false
+    engines:
+      node: '>=10.16'
+    resolution:
+      integrity: sha512-JO+MeNdc6lKaAjUqtMSx0V2+NkGtPWIJsyXrNrGhzzazgVdr6kxJUZnuBQQ8SZUyxVAOjoTBZTOxoHcFuSfkTg==
   /@pnpm/logger/3.2.3:
     dependencies:
       bole: /@zkochan/bole/3.0.4
       ndjson: 1.5.0
-    dev: true
     engines:
       node: '>=10'
     resolution:
@@ -4277,6 +4302,16 @@ packages:
       '@pnpm/logger': '*'
     resolution:
       integrity: sha512-ehMi14fH9rQfgoxAuSmIDE9kA7WcLkmWMdF0k9L+HUyXcH6CRsWOln+Srxn8T1egsaRbpVcqtFhRQtVZk4XXLg==
+  /@pnpm/merge-lockfile-changes/1.0.1:
+    dependencies:
+      '@pnpm/lockfile-types': 2.2.0
+      ramda: 0.27.1
+      semver: 7.3.4
+    dev: false
+    engines:
+      node: '>=10.16'
+    resolution:
+      integrity: sha512-eJg3mBAoIEp5jtf/WKZ+MO0ZFpLmBZ9oYzGn166EZX7wAiSvDNxWGnfJ2tc2YeIBd6kb7OC1OoTybm7gtR6D9g==
   /@pnpm/meta-updater/0.0.0:
     dependencies:
       '@pnpm/find-workspace-dir': 2.0.0
@@ -4377,7 +4412,6 @@ packages:
     resolution:
       integrity: sha512-T2YxUGspEq2nC5g7075n8A0we6weR9m6aEvZu9aCml6yEw1eXvpLa1GGhch/WHQVj1c/LzDM4rOEWl9kAObq4A==
   /@pnpm/types/6.4.0:
-    dev: true
     engines:
       node: '>=10.16'
     resolution:
@@ -5579,7 +5613,6 @@ packages:
     resolution:
       integrity: sha1-y5NW8vRscy8OMZnmEClVp32oPB0=
   /any-promise/1.3.0:
-    dev: true
     resolution:
       integrity: sha1-q8av7tzqUugJzcA3au0845Y10X8=
   /anymatch/3.1.1:
@@ -11174,7 +11207,6 @@ packages:
       any-promise: 1.3.0
       object-assign: 4.1.1
       thenify-all: 1.6.0
-    dev: true
     resolution:
       integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==
   /nan/2.14.2:
@@ -13985,7 +14017,6 @@ packages:
   /thenify-all/1.6.0:
     dependencies:
       thenify: 3.3.1
-    dev: true
     engines:
       node: '>=0.8'
     resolution:
@@ -13993,7 +14024,6 @@ packages:
   /thenify/3.3.1:
     dependencies:
       any-promise: 1.3.0
-    dev: true
     resolution:
       integrity: sha512-RVZSIV5IG10Hk3enotrhvz0T9em6cyHBLkH/YAZuKqd8hRkKhSfCGIcP2KUY0EPxndzANBmNllzWPwak+bheSw==
   /throat/5.0.0:
